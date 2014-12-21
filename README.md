@@ -15,8 +15,9 @@ pod 'CRuby', git: 'https://github.com/xord/cruby'
 ターミナルで以下を実行し、
 
 ```sh
-$ pod install
+$ pod install --verbose
 ```
+（コンパイル時間が長いため、--verbose オプションの使用を推奨します。）
 
 CRuby を使いたい所で以下のように文字列を評価することができます。
 
