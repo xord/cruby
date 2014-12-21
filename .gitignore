@@ -1,1 +1,6 @@
 *~
+
+ruby-*.tar.*
+ruby/
+CRuby.framework/
+cruby.a
