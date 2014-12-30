@@ -15,7 +15,7 @@ pod 'CRuby', git: 'https://github.com/xord/cruby'
 ターミナルで以下を実行し、
 
 ```sh
-$ pod install --verbose
+$ CRUBY_PLATFORM=ios pod install --verbose
 ```
 （コンパイル時間が長いため、--verbose オプションの使用を推奨します。）
 

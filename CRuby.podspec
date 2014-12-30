@@ -27,5 +27,6 @@ Pod::Spec.new do |s|
   s.osx.xcconfig     = {"HEADER_SEARCH_PATHS" => "#{root}/#{s.name}_osx.framework/Headers"}
   s.ios.xcconfig     = {"HEADER_SEARCH_PATHS" => "#{root}/#{s.name}_ios.framework/Headers"}
 
-  s.prepare_command = "rake all"
+  platform = ENV['CRUBY_PLATFORM']
+  s.prepare_command = platform ? "rake platform=#{platform}" : "rake all"
 end
