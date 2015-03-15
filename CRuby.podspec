@@ -15,10 +15,10 @@ Pod::Spec.new do |s|
   s.osx.deployment_target = "10.7"
   s.ios.deployment_target = "7.0"
 
-  root = "$(PODS_ROOT)/#{s.name}"
+  root = "${PODS_ROOT}/#{s.name}"
 
   s.source_files     = "#{s.name}/**/*.{h,m}"
-  s.resource_bundles = {"CRuby" => "ruby/lib"}
+  s.resource_bundles = {"CRuby" => "ruby/.lib"}
   s.xcconfig         = {"FRAMEWORK_SEARCH_PATHS" => root}
 
   s.preserve_paths   = "#{s.name}_osx.framework", "#{s.name}_ios.framework", "ruby"
@@ -28,5 +28,7 @@ Pod::Spec.new do |s|
   s.ios.xcconfig     = {"HEADER_SEARCH_PATHS" => "#{root}/#{s.name}_ios.framework/Headers"}
 
   platform = ENV['CRUBY_PLATFORM']
-  s.prepare_command = platform ? "rake platform=#{platform}" : "rake all"
+  archs    = ENV['CRUBY_ARCHS']
+  archs    = archs ? "archs='#{archs}'" : ''
+  s.prepare_command = platform ? "rake platform=#{platform} #{archs}" : "rake all"
 end

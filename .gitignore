@@ -1,6 +1,7 @@
 *~
+.DS_Store
 
 ruby-*.tar.*
 ruby/
-CRuby.framework/
-cruby.a
+CRuby_*.framework/
+cruby_*.a

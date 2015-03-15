@@ -29,6 +29,7 @@ end
 
 
 PLATFORM = (ENV['platform'] || :osx).intern
+ARCHS    = ENV['archs'].tap {|o| break o.split(/ |,/) if o}
 ROOT_DIR = File.expand_path "..", __FILE__
 
 NAME     = "CRuby"
@@ -78,6 +79,7 @@ namespace :ruby do
   lib_all  = "#{ROOT_DIR}/#{lib_name}"
 
   configure = "#{RUBY_DIR}/configure"
+  lib_dir   = "#{RUBY_DIR}/.lib"
 
   task :clean do
     sh %( rm -rf #{RUBY_ARCHIVE} #{RUBY_DIR} #{lib_all} )
@@ -95,11 +97,20 @@ namespace :ruby do
     sh %( touch #{configure} )
   end
 
+  file lib_dir => configure do
+    sh %( cp -rf #{RUBY_DIR}/lib #{lib_dir} )
+    Dir.glob "#{RUBY_DIR}/ext/*/lib" do |lib|
+      sh %( cp -rf #{lib}/* #{lib_dir} ) unless Dir.glob("#{lib}/*").empty?
+    end
+  end
+
   TARGETS.each do |sdk, target|
     sdkroot = xcrun sdk, "--show-sdk-path"
     path    = xcrun(sdk, '--find cc').sub %r|/cc$|i, ''
+    archs   = target[:archs]
+    archs   = archs.select {|arch| ARCHS.include? arch} if ARCHS
 
-    target[:archs].each do |arch|
+    archs.each do |arch|
       namespace arch do
 
         build_dir    = "#{RUBY_DIR}/.build_#{sdk}_#{arch}"
@@ -182,7 +193,7 @@ namespace :ruby do
     sh %( lipo -create #{t.prerequisites.join ' '} -output #{lib_all} )
   end
 
-  task :make => lib_all
+  task :make => [lib_all, lib_dir]
 
 end# ruby
 
