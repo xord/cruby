@@ -45,8 +45,8 @@ TARGETS  = {
   }
 }[PLATFORM]
 
-RUBY_URL     = "http://cache.ruby-lang.org/pub/ruby/2.1/ruby-2.1.5.tar.bz2"
-RUBY_SHA256  = '0241b40f1c731cb177994a50b854fb7f18d4ad04dcefc18acc60af73046fb0a9'
+RUBY_URL     = "http://cache.ruby-lang.org/pub/ruby/2.2/ruby-2.2.1.tar.gz"
+RUBY_SHA256  = '5a4de38068eca8919cb087d338c0c2e3d72c9382c804fb27ab746e6c7819ab28'
 RUBY_ARCHIVE = File.basename RUBY_URL
 RUBY_DIR     = "#{ROOT_DIR}/ruby"
 
