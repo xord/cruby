@@ -58,6 +58,11 @@
 	return [self call:method args:@[arg1, arg2, arg3]];
 }
 
+- (BOOL)toBOOL
+{
+	return RTEST(_value) ? YES : NO;
+}
+
 - (NSInteger)toInt
 {
 	VALUE ret = [self call:@"to_i"].value;

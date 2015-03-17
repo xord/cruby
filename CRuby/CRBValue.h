@@ -15,6 +15,7 @@
 - (CRBValue *)call:(NSString *)method arg1:(CRBValue *)arg1 arg2:(CRBValue *)arg2;
 - (CRBValue *)call:(NSString *)method arg1:(CRBValue *)arg1 arg2:(CRBValue *)arg2 arg3:(CRBValue *)arg3;
 
+- (BOOL          )toBOOL;
 - (NSInteger     )toInt;
 - (NSString     *)toString;
 - (NSArray      *)toArray;

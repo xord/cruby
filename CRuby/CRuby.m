@@ -58,45 +58,31 @@ static NSMutableDictionary *gExtensions = nil;
 	ruby_finalize();
 }
 
-+ (void)load:(NSString *)filename
++ (BOOL)load:(NSString *)filename
 {
-	[self load:filename rescue:^(CRBValue *exception) {
+	return [self load:filename rescue:^(CRBValue *exception) {
 		NSLog(@"Exception: %@", exception.inspect);
 	}];
 }
 
-+ (void)load:(NSString *)filename rescue:(RescueBlock)rescue
++ (BOOL)load:(NSString *)filename rescue:(RescueBlock)rescue
 {
-	NSString *s = [NSString stringWithFormat:@"load '%@'", filename];
-	[CRuby eval:s rescue:rescue];
+	NSString *s   = [NSString stringWithFormat:@"load '%@'", filename];
+	CRBValue *ret = [CRuby evaluate:s rescue:rescue];
+	return ret && ret.toBOOL;
 }
 
-+ (CRBValue *)eval:(NSString *)string
++ (CRBValue *)evaluate:(NSString *)string
 {
-	return [self eval:string rescue:^(CRBValue *exception) {
+	return [self evaluate:string rescue:^(CRBValue *exception) {
 		NSLog(@"Exception: %@", exception.inspect);
 	}];
 }
 
-+ (CRBValue *)eval:(NSString *)string rescue:(void(^)(CRBValue *))rescue
++ (CRBValue *)evaluate:(NSString *)string rescue:(RescueBlock)rescue
 {
 	[self addResourceDirToLoadPath];
-
-	int state = 0;
-	VALUE ret = rb_eval_string_protect(string.UTF8String, &state);
-	if (state != 0)
-	{
-		VALUE exception = rb_errinfo();
-		if (state == TAG_RAISE && RTEST(exception))
-		{
-			rb_set_errinfo(Qnil);
-			if (rescue) rescue([[CRBValue alloc] initWithValue:exception]);
-		}
-		else
-			rb_jump_tag(state);
-	}
-
-	return [[CRBValue alloc] initWithValue:ret];
+	return [self eval:string rescue:rescue];
 }
 
 + (void)addResourceDirToLoadPath
@@ -115,13 +101,39 @@ static NSMutableDictionary *gExtensions = nil;
 	[self addLibraryPath:res_dir];
 }
 
++ (CRBValue *)eval:(NSString *)string
+{
+	return [self eval:string rescue:^(CRBValue *exception) {
+		NSLog(@"Exception: %@", exception.inspect);
+	}];
+}
+
++ (CRBValue *)eval:(NSString *)string rescue:(void(^)(CRBValue *))rescue
+{
+	int state = 0;
+	VALUE ret = rb_eval_string_protect(string.UTF8String, &state);
+	if (state != 0)
+	{
+		VALUE exception = rb_errinfo();
+		if (state == TAG_RAISE && RTEST(exception))
+		{
+			rb_set_errinfo(Qnil);
+			if (rescue) rescue([[CRBValue alloc] initWithValue:exception]);
+		}
+		else
+			rb_jump_tag(state);
+	}
+
+	return [[CRBValue alloc] initWithValue:ret];
+}
+
 + (void)addLibrary:(NSString *)name bundle:(NSBundle *)bundle
 {
 	NSString *lib_dir = [NSString stringWithFormat:
 		#if TARGET_OS_IPHONE
-			@"%@/%@.bundle/.lib", bundle.bundlePath, name];
+			@"%@/%@.bundle/lib", bundle.bundlePath, name];
 		#else
-			@"%@/%@.bundle/Contents/Resources/.lib", bundle.resourcePath, name];
+			@"%@/%@.bundle/Contents/Resources/lib", bundle.resourcePath, name];
 		#endif
 	[self addLibraryPath:lib_dir];
 }

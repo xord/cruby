@@ -1,7 +1,5 @@
 // -*- mode: objc -*-
 #import <Foundation/Foundation.h>
-
-
 #import <CRBValue.h>
 
 
@@ -9,13 +7,13 @@
 
 typedef void (^RescueBlock) (CRBValue *exception);
 
-+ (void)load:(NSString *)filename;
++ (BOOL)load:(NSString *)filename;
 
-+ (void)load:(NSString *)filename rescue:(RescueBlock)rescue;
++ (BOOL)load:(NSString *)filename rescue:(RescueBlock)rescue;
 
-+ (CRBValue *)eval:(NSString *)string;
++ (CRBValue *)evaluate:(NSString *)string;
 
-+ (CRBValue *)eval:(NSString *)string rescue:(RescueBlock)rescue;
++ (CRBValue *)evaluate:(NSString *)string rescue:(RescueBlock)rescue;
 
 + (void)addLibrary:(NSString *)name bundle:(NSBundle *)bundle;
 

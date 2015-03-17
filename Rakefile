@@ -28,9 +28,10 @@ def xcrun (sdk, param)
 end
 
 
-PLATFORM = (ENV['platform'] || :osx).intern
-ARCHS    = ENV['archs'].tap {|o| break o.split(/ |,/) if o}
-ROOT_DIR = File.expand_path "..", __FILE__
+PLATFORM  = (ENV['platform'] || :osx).intern
+ARCHS     = ENV['archs'].tap {|o| break o.split(/ |,/) if o}
+ROOT_DIR  = File.expand_path "..", __FILE__
+BUILD_DIR = "#{ROOT_DIR}/build"
 
 NAME     = "CRuby"
 LIB_NAME = "#{NAME}_#{PLATFORM}"
@@ -65,24 +66,27 @@ task :default => :make
 
 task :make => 'framework:make'
 
-task :clean => %w[ruby framework].map {|s| "#{s}:clean"}
+task :clean => %w[ruby framework].map {|s| "#{s}:clean"} do
+  sh %( rm -rf #{BUILD_DIR} )
+end
 
 task :all do
   sh %( rake platform=osx )
   sh %( rake platform=ios )
 end
 
+directory BUILD_DIR
+
 
 namespace :ruby do
 
-  lib_name = "#{LIB_NAME}.a"
-  lib_all  = "#{ROOT_DIR}/#{lib_name}"
-
-  configure = "#{RUBY_DIR}/configure"
-  lib_dir   = "#{RUBY_DIR}/.lib"
+  configure    = "#{RUBY_DIR}/configure"
+  lib_name     = "#{LIB_NAME}.a"
+  lib_all      = "#{BUILD_DIR}/#{lib_name}"
+  ruby_lib_dir = "#{BUILD_DIR}/lib"
 
   task :clean do
-    sh %( rm -rf #{RUBY_ARCHIVE} #{RUBY_DIR} #{lib_all} )
+    sh %( rm -rf #{RUBY_ARCHIVE} #{RUBY_DIR} )
   end
 
   file RUBY_ARCHIVE do |t|
@@ -97,10 +101,10 @@ namespace :ruby do
     sh %( touch #{configure} )
   end
 
-  file lib_dir => configure do
-    sh %( cp -rf #{RUBY_DIR}/lib #{lib_dir} )
+  file ruby_lib_dir => [configure, BUILD_DIR] do
+    sh %( cp -rf #{RUBY_DIR}/lib #{ruby_lib_dir} )
     Dir.glob "#{RUBY_DIR}/ext/*/lib" do |lib|
-      sh %( cp -rf #{lib}/* #{lib_dir} ) unless Dir.glob("#{lib}/*").empty?
+      sh %( cp -rf #{lib}/* #{ruby_lib_dir} ) unless Dir.glob("#{lib}/*").empty?
     end
   end
 
@@ -113,7 +117,7 @@ namespace :ruby do
     archs.each do |arch|
       namespace arch do
 
-        build_dir    = "#{RUBY_DIR}/.build_#{sdk}_#{arch}"
+        build_dir    = "#{BUILD_DIR}/#{sdk}_#{arch}"
         makefile     = "#{build_dir}/Makefile"
         libruby_name = "libruby-static.a"
         libruby      = "#{build_dir}/#{libruby_name}"
@@ -193,7 +197,7 @@ namespace :ruby do
     sh %( lipo -create #{t.prerequisites.join ' '} -output #{lib_all} )
   end
 
-  task :make => [lib_all, lib_dir]
+  task :make => [lib_all, ruby_lib_dir]
 
 end# ruby
 
@@ -201,7 +205,7 @@ end# ruby
 namespace :framework do
 
   src_dir            = "#{ROOT_DIR}/framework"
-  framework_dir      = "#{ROOT_DIR}/#{LIB_NAME}.framework"
+  framework_dir      = "#{BUILD_DIR}/#{LIB_NAME}.framework"
   versions_dir       = "#{framework_dir}/Versions"
   version_dir        = "#{versions_dir}/A"
   version_header_dir = "#{version_dir}/Headers"
@@ -212,11 +216,9 @@ namespace :framework do
   res_dir            = "#{framework_dir}/Resources"
   lib                = "#{framework_dir}/#{LIB_NAME}"
 
-  task :clean do
-    sh %( rm -rf #{framework_dir} )
-  end
+  task :clean
 
-  file framework_dir do
+  file framework_dir => BUILD_DIR do
     sh %( cp -R #{src_dir}            #{framework_dir} )
     sh %( cp -R #{RUBY_DIR}/include/* #{version_header_dir} )
   end
@@ -238,7 +240,7 @@ namespace :framework do
   end
 
   file version_lib => ["ruby:make", framework_dir] do
-    sh %( cp #{ROOT_DIR}/#{LIB_NAME}.a #{version_lib} )
+    sh %( cp #{BUILD_DIR}/#{LIB_NAME}.a #{version_lib} )
   end
 
   task :make => version_lib

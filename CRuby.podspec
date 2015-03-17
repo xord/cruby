@@ -15,20 +15,21 @@ Pod::Spec.new do |s|
   s.osx.deployment_target = "10.7"
   s.ios.deployment_target = "7.0"
 
-  root = "${PODS_ROOT}/#{s.name}"
+  root  = "${PODS_ROOT}/#{s.name}"
+  build = "#{root}/build"
 
   s.source_files     = "#{s.name}/**/*.{h,m}"
-  s.resource_bundles = {"CRuby" => "ruby/.lib"}
-  s.xcconfig         = {"FRAMEWORK_SEARCH_PATHS" => root}
+  s.resource_bundles = {"CRuby" => "build/lib"}
+  s.xcconfig         = {"FRAMEWORK_SEARCH_PATHS" => build}
 
-  s.preserve_paths   = "#{s.name}_osx.framework", "#{s.name}_ios.framework", "ruby"
+  s.preserve_paths   = "ruby", build
   s.osx.frameworks   = "#{s.name}_osx"
   s.ios.frameworks   = "#{s.name}_ios"
-  s.osx.xcconfig     = {"HEADER_SEARCH_PATHS" => "#{root}/#{s.name}_osx.framework/Headers"}
-  s.ios.xcconfig     = {"HEADER_SEARCH_PATHS" => "#{root}/#{s.name}_ios.framework/Headers"}
+  s.osx.xcconfig     = {"HEADER_SEARCH_PATHS" => "#{build}/#{s.name}_osx.framework/Headers"}
+  s.ios.xcconfig     = {"HEADER_SEARCH_PATHS" => "#{build}/#{s.name}_ios.framework/Headers"}
 
   platform = ENV['CRUBY_PLATFORM']
   archs    = ENV['CRUBY_ARCHS']
   archs    = archs ? "archs='#{archs}'" : ''
-  s.prepare_command = platform ? "rake platform=#{platform} #{archs}" : "rake all"
+  s.prepare_command = platform ? "rake platform='#{platform}' #{archs}" : "rake all"
 end
