@@ -34,6 +34,10 @@ static NSMutableDictionary *gExtensions = nil;
 
 + (void)initialize
 {
+	static BOOL done = NO;
+	if (done) return;
+	done = YES;
+
 	gExtensions = [NSMutableDictionary dictionary];
 
 	ruby_init();
@@ -56,6 +60,20 @@ static NSMutableDictionary *gExtensions = nil;
 + (void)finalize
 {
 	ruby_finalize();
+}
+
++ (BOOL)start:(NSString *)filename
+{
+	return [self start:filename rescue:^(CRBValue *exception) {
+		NSLog(@"Exception: %@", exception.inspect);
+	}];
+}
+
++ (BOOL)start:(NSString *)filename rescue:(RescueBlock)rescue
+{
+	BOOL ret = [self load:filename rescue:rescue];
+	[self finalize];
+	return ret;
 }
 
 + (BOOL)load:(NSString *)filename
@@ -108,7 +126,7 @@ static NSMutableDictionary *gExtensions = nil;
 	}];
 }
 
-+ (CRBValue *)eval:(NSString *)string rescue:(void(^)(CRBValue *))rescue
++ (CRBValue *)eval:(NSString *)string rescue:(RescueBlock)rescue
 {
 	int state = 0;
 	VALUE ret = rb_eval_string_protect(string.UTF8String, &state);

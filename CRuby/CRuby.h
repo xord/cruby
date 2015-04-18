@@ -7,12 +7,13 @@
 
 typedef void (^RescueBlock) (CRBValue *exception);
 
-+ (BOOL)load:(NSString *)filename;
++ (BOOL)start:(NSString *)filename;
++ (BOOL)start:(NSString *)filename rescue:(RescueBlock)rescue;
 
++ (BOOL)load:(NSString *)filename;
 + (BOOL)load:(NSString *)filename rescue:(RescueBlock)rescue;
 
 + (CRBValue *)evaluate:(NSString *)string;
-
 + (CRBValue *)evaluate:(NSString *)string rescue:(RescueBlock)rescue;
 
 + (void)addLibrary:(NSString *)name bundle:(NSBundle *)bundle;
