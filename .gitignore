@@ -3,5 +3,4 @@
 
 ruby-*.tar.*
 ruby/
-CRuby_*.framework/
-cruby_*.a
+build/

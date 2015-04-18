@@ -22,7 +22,7 @@ Pod::Spec.new do |s|
   s.resource_bundles = {"CRuby" => "build/lib"}
   s.xcconfig         = {"FRAMEWORK_SEARCH_PATHS" => build}
 
-  s.preserve_paths   = "ruby", build
+  s.preserve_paths   = "ruby", "build"
   s.osx.frameworks   = "#{s.name}_osx"
   s.ios.frameworks   = "#{s.name}_ios"
   s.osx.xcconfig     = {"HEADER_SEARCH_PATHS" => "#{build}/#{s.name}_osx.framework/Headers"}
