@@ -1,0 +1,7 @@
+language: objective-c
+before_install:
+  - date
+after_script:
+  - date
+script:
+  - rake clean all
