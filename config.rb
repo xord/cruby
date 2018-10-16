@@ -9,8 +9,8 @@ POD_VERSION = 0
 
 module CRuby
   def self.version ()
-    major, minor = ruby_version
-    [major, minor, POD_VERSION].join '.'
+    *heads, patch = ruby_version
+    [*heads, patch * 100 + POD_VERSION].join '.'
   end
 
   def self.ruby_version ()
