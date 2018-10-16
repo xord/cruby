@@ -202,8 +202,6 @@ static NSMutableDictionary *gExtensions = nil;
 	void Init_wait();
 	void Init_generator();
 	void Init_parser();
-	void Init_complex();
-	void Init_rational();
 	void Init_nkf();
 	void Init_objspace();
 	void Init_pathname();
@@ -218,10 +216,9 @@ static NSMutableDictionary *gExtensions = nil;
 	void Init_stringio();
 	void Init_strscan();
 	void Init_syslog();
-	void Init_thread();
 	void Init_zlib();
 
-	[self addExtension:@"bigdecimal"          init:^{Init_bigdecimal();}];
+	//[self addExtension:@"bigdecimal"          init:^{Init_bigdecimal();}];
 	[self addExtension:@"continuation"        init:^{Init_continuation();}];
 	[self addExtension:@"coverage"            init:^{Init_coverage();}];
 	[self addExtension:@"date_core"           init:^{Init_date_core();}];
@@ -243,8 +240,6 @@ static NSMutableDictionary *gExtensions = nil;
 	[self addExtension:@"io/wait"             init:^{Init_wait();}];
 	[self addExtension:@"json/ext/generator"  init:^{Init_generator();}];
 	[self addExtension:@"json/ext/parser"     init:^{Init_parser();}];
-	[self addExtension:@"mathn/complex"       init:^{Init_complex();}];
-	[self addExtension:@"mathn/rational"      init:^{Init_rational();}];
 	[self addExtension:@"nkf"                 init:^{Init_nkf();}];
 	[self addExtension:@"objspace"            init:^{Init_objspace();}];
 	[self addExtension:@"pathname"            init:^{Init_pathname();}];
@@ -259,8 +254,7 @@ static NSMutableDictionary *gExtensions = nil;
 	[self addExtension:@"stringio"            init:^{Init_stringio();}];
 	[self addExtension:@"strscan"             init:^{Init_strscan();}];
 	//[self addExtension:@"syslog"              init:^{Init_syslog();}];
-	[self addExtension:@"thread"              init:^{Init_thread();}];
-	//[self addExtension:@"zlib"                init:^{Init_zlib();}];
+	[self addExtension:@"zlib"                init:^{Init_zlib();}];
 }
 
 @end

@@ -1,6 +1,7 @@
 *~
+*.tar.gz
 .DS_Store
 
-ruby-*.tar.*
+.build/
 ruby/
-build/
+CRuby/

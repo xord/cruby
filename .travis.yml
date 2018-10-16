@@ -1,5 +1,7 @@
 os: osx
 language: c
+compiler:
+  - clang
 before_install:
   - date
 after_script:
