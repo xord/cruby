@@ -1,8 +1,8 @@
 # -*- mode: ruby; coding: utf-8 -*-
 
 
-RUBY_URL    = 'https://cache.ruby-lang.org/pub/ruby/2.3/ruby-2.3.0.tar.gz'
-RUBY_SHA256 = 'ba5ba60e5f1aa21b4ef8e9bf35b9ddb57286cb546aac4b5a28c71f459467e507'
+RUBY_URL    = 'https://cache.ruby-lang.org/pub/ruby/2.3/ruby-2.3.7.tar.gz'
+RUBY_SHA256 = '35cd349cddf78e4a0640d28ec8c7e88a2ae0db51ebd8926cd232bb70db2c7d7f'
 
 POD_VERSION = 0
 
