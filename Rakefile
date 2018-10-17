@@ -13,6 +13,11 @@ def write_file (path, data)
   open(path, 'w') {|f| f.write data}
 end
 
+def download (url, path)
+  puts "downloading '#{url}'..."
+  write_file path, read_file(url)
+end
+
 def chdir (dir = RUBY_DIR, &block)
   Dir.chdir dir, &block
 end
@@ -43,8 +48,10 @@ OUTPUT_LIB_FILE = "#{OUTPUT_DIR}/#{OUTPUT_LIB_NAME}"
 OUTPUT_LIB_DIR  = "#{OUTPUT_DIR}/lib"
 OUTPUT_INC_DIR  = "#{OUTPUT_DIR}/include"
 
-RUBY_ARCHIVE   = "#{ROOT_DIR}/#{File.basename RUBY_URL}"
-OUTPUT_ARCHIVE = "#{NAME}_prebuilt-#{CRuby.version}.tar.gz"
+RUBY_ARCHIVE     = "#{ROOT_DIR}/#{File.basename RUBY_URL}"
+OUTPUT_ARCHIVE   = "#{NAME}_prebuilt-#{CRuby.version}.tar.gz"
+PREBUILT_URL     = "#{GITHUB_URL}/releases/download/v#{CRuby.version}/#{OUTPUT_ARCHIVE}"
+PREBUILT_ARCHIVE = "downloaded_#{OUTPUT_ARCHIVE}"
 
 TARGETS = {
   osx: {
@@ -68,7 +75,7 @@ task :clean do
 end
 
 desc "delete all generated files"
-task :clobber do
+task :clobber => :clean do
   sh %( rm -rf #{RUBY_ARCHIVE} #{RUBY_DIR} )
 end
 
@@ -81,8 +88,7 @@ directory OUTPUT_DIR
 directory MINIRUBY_DIR
 
 file RUBY_ARCHIVE do |t|
-  puts "downloading '#{t.name}'..."
-  write_file RUBY_ARCHIVE, read_file(RUBY_URL)
+  download RUBY_URL, RUBY_ARCHIVE
 end
 
 file CONFIGURE => [RUBY_ARCHIVE, RUBY_DIR] do
@@ -114,19 +120,6 @@ file OUTPUT_LIB_FILE do |t|
 end
 
 
-desc "archive built files for deploy"
-task :archive => OUTPUT_ARCHIVE
-
-file OUTPUT_ARCHIVE => :all do
-  sh %( tar cvzf #{OUTPUT_ARCHIVE} #{OUTPUT_DIR.sub(ROOT_DIR + '/', '')} )
-end
-
-desc "download prebuilt binaries"
-task :download
-
-desc "download prebuilt binary or build all"
-task :download_or_build_all => [:download, :all]
-
 desc "build files for all platforms"
 task :all => [:osx, :ios]
 
@@ -138,6 +131,27 @@ end
 desc "build files for iOS"
 task :ios do
   sh %( rake platform=ios )
+end
+
+
+desc "archive built files for deploy"
+task :archive => OUTPUT_ARCHIVE
+
+file OUTPUT_ARCHIVE => :all do
+  sh %( tar cvzf #{OUTPUT_ARCHIVE} #{OUTPUT_DIR.sub(ROOT_DIR + '/', '')} )
+end
+
+desc "download prebuilt binary or build all"
+task :download_or_build_all => PREBUILT_ARCHIVE do
+  if File.exist?(PREBUILT_ARCHIVE)
+    sh %( tar xzf #{PREBUILT_ARCHIVE} )
+  else
+    sh %( rake all )
+  end
+end
+
+file PREBUILT_ARCHIVE do
+  download PREBUILT_URL, PREBUILT_ARCHIVE rescue OpenURI::HTTPError
 end
 
 
