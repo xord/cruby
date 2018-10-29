@@ -7,7 +7,7 @@ before_install:
 after_script:
   - date
 script:
-  - rake clean all
+  - rake clean archive
 deploy:
   provider: releases
   api_key:

@@ -33,8 +33,5 @@ Pod::Spec.new do |s|
     "LIBRARY_SEARCH_PATHS" => "#{root}/CRuby",
   }
 
-  platform = ENV['CRUBY_PLATFORM']
-  archs    = ENV['CRUBY_ARCHS']
-  archs    = archs ? "archs='#{archs}'" : ''
-  s.prepare_command = platform ? "rake platform='#{platform}' #{archs}" : "rake all"
+  s.prepare_command = "rake download_or_build_all"
 end
