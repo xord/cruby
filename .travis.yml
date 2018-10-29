@@ -8,3 +8,12 @@ after_script:
   - date
 script:
   - rake clean all
+deploy:
+  provider: releases
+  api_key:
+    secure: hApRKkK9v1XqxEZOZ56CXsRzNyku0uI6mZYg78ghKIVCdnhVqUqeJ5Pnemflv8vBtXUbGY+5TP4pyiDdovJvBW4ULzBICyyn3pa3v+gXNJQxoueEJ3iE5vxmOkCC1Dls1qaauVSIrx6Twxk4PVOXhYjlpjpCajs8FDeuQ9s8UmQ=
+  file: CRuby_prebuilt-*.tar.gz
+  skip_cleanup: true
+  on:
+    repo: xord/cruby
+    tags: true
