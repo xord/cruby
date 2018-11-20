@@ -26,9 +26,19 @@ def xcrun (sdk, param)
   `xcrun --sdk #{sdk} #{param}`.chomp
 end
 
+def version_string (major, minor = 0, patch = 0)
+  [major, minor, patch].map {|n| "%03d" % n}.join
+end
+
+def ruby25_or_higher? ()
+  version_string(*CRuby.ruby_version) >= version_string(2, 5)
+end
+
 
 PLATFORM = (ENV['platform'] || :osx).intern
-ARCHS    = ENV['archs'].tap {|o| break o.split(/ |,/) if o}
+ARCHS    =
+  ENV['archs'].tap {|archs| break archs.split(/[ ,]+/) if archs} ||
+  ENV['arch'] .tap {|arch|  break [arch]               if arch}
 
 NAME        = "CRuby"
 LIB_NAME    = "#{NAME}_#{PLATFORM}"
@@ -39,9 +49,10 @@ RUBY_DIR     = "#{ROOT_DIR}/ruby"
 BUILD_DIR    = "#{ROOT_DIR}/.build"
 OUTPUT_DIR   = "#{ROOT_DIR}/CRuby"
 
-CONFIGURE    = "#{RUBY_DIR}/configure"
-MINIRUBY_DIR = "#{BUILD_DIR}/miniruby"
-MINIRUBY_BIN = "#{MINIRUBY_DIR}/miniruby"
+CONFIGURE               = "#{RUBY_DIR}/configure"
+NATIVE_RUBY_DIR         = "#{BUILD_DIR}/native"
+NATIVE_RUBY_INSTALL_DIR = "#{BUILD_DIR}/native-install"
+NATIVE_RUBY_BIN         = "#{NATIVE_RUBY_INSTALL_DIR}/bin/ruby"
 
 OUTPUT_LIB_NAME = "lib#{LIB_NAME}.a"
 OUTPUT_LIB_FILE = "#{OUTPUT_DIR}/#{OUTPUT_LIB_NAME}"
@@ -85,7 +96,7 @@ task :build => [OUTPUT_LIB_DIR, OUTPUT_INC_DIR, OUTPUT_LIB_FILE]
 directory RUBY_DIR
 directory BUILD_DIR
 directory OUTPUT_DIR
-directory MINIRUBY_DIR
+directory NATIVE_RUBY_DIR
 
 file RUBY_ARCHIVE do |t|
   download RUBY_URL, RUBY_ARCHIVE
@@ -96,10 +107,10 @@ file CONFIGURE => [RUBY_ARCHIVE, RUBY_DIR] do
   sh %( touch #{CONFIGURE} )
 end
 
-file MINIRUBY_BIN => [CONFIGURE, MINIRUBY_DIR] do
-  chdir MINIRUBY_DIR do
-    sh %( #{CONFIGURE} )
-    sh %( make miniruby )
+file NATIVE_RUBY_BIN => [CONFIGURE, NATIVE_RUBY_DIR] do
+  chdir NATIVE_RUBY_DIR do
+    sh %( #{CONFIGURE} --prefix=#{NATIVE_RUBY_INSTALL_DIR} --disable-install-doc )
+    sh %( make && make install )
   end
 end
 
@@ -164,7 +175,8 @@ TARGETS.each do |sdk, archs|
     namespace arch do
       arch_dir     = "#{BUILD_DIR}/#{sdk}_#{arch}"
       makefile     = "#{arch_dir}/Makefile"
-      libruby      = "#{arch_dir}/libruby-static.a"
+      libruby_ver  = ruby25_or_higher? ? ".#{CRuby.ruby_version.join '.'}" : ""
+      libruby      = "#{arch_dir}/libruby#{libruby_ver}-static.a"
       lib_file     = "#{arch_dir}/#{OUTPUT_LIB_NAME}"
       config_h     = "#{OUTPUT_INC_DIR}/ruby/config-#{PLATFORM}_#{arch}.h"
       config_h_dir = File.dirname config_h
@@ -197,19 +209,23 @@ TARGETS.each do |sdk, archs|
         flags           += " -I#{arch_inc_dir}"
       end
 
-      file makefile => [CONFIGURE, MINIRUBY_BIN, arch_dir, *missing_headers] do
+      file makefile => [CONFIGURE, NATIVE_RUBY_BIN, arch_dir, *missing_headers] do
         chdir arch_dir do
-          ENV['PATH']     = "#{path}:#{PATHS}"
-          ENV['CPP']      = "clang -arch #{arch} -E"
-          ENV['CC']       = "clang -arch #{arch}"
-          ENV['CXXCPP']   = "clang++ -arch #{arch} -E"
-          ENV['CXX']      = "clang++ -arch #{arch}"
-          ENV['CPPFLAGS'] = "#{flags}"
-          ENV['CFLAGS']   = "#{flags} -fvisibility=hidden"
-          ENV['CXXFLAGS'] = "-fvisibility-inline-hidden"
-          ENV['LDFLAGS']  = "#{flags} -L#{sdkroot}/usr/lib -lSystem"
-          opts            = %w[
+          envs = {
+            'PATH'     => "#{path}:#{PATHS}",
+            'CPP'      => "clang -arch #{arch} -E",
+            'CC'       => "clang -arch #{arch}",
+            'CXXCPP'   => "clang++ -arch #{arch} -E",
+            'CXX'      => "clang++ -arch #{arch}",
+            'CPPFLAGS' => "#{flags}",
+            'CFLAGS'   => "#{flags} -fvisibility=hidden",
+            'CXXFLAGS' => "-fvisibility-inline-hidden",
+            'LDFLAGS'  => "#{flags} -L#{sdkroot}/usr/lib -lSystem"
+          }.map {|k, v| "#{k}='#{v}'"}
+          opts = %W[
+            --host=#{host}
             --disable-shared
+            --with-baseruby=#{NATIVE_RUBY_BIN}
             --with-static-linked-ext
             --without-tcl
             --without-tk
@@ -218,7 +234,7 @@ TARGETS.each do |sdk, archs|
             --disable-install-doc
           ]
           opts << "--with-arch=#{arch}" unless arch =~ /^arm/
-          sh %( #{CONFIGURE} --host=#{host} #{opts.join ' '} )
+          sh %( #{envs.join ' '} #{CONFIGURE}  #{opts.join ' '} )
         end
       end
 
@@ -230,8 +246,6 @@ TARGETS.each do |sdk, archs|
 
       file libruby => makefile do
         chdir arch_dir do
-          sh %( make miniruby )
-          sh %( cp #{MINIRUBY_BIN} miniruby )
           sh %( make )
         end
       end
