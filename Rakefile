@@ -234,7 +234,7 @@ TARGETS.each do |sdk, archs|
             --disable-install-doc
           ]
           opts << "--with-arch=#{arch}" unless arch =~ /^arm/
-          sh %( #{envs.join ' '} #{CONFIGURE}  #{opts.join ' '} )
+          sh %( #{envs.join ' '} #{CONFIGURE} #{opts.join ' '} )
         end
       end
 
