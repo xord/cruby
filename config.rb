@@ -16,7 +16,7 @@ module CRuby
   end
 
   def self.ruby_version ()
-    m = RUBY_URL.match /ruby\-(\d)\.(\d)\.(\d)\.tar\.gz/
+    m = RUBY_URL.match /ruby\-(\d)\.(\d)\.(\d)(?:\-\w*)?\.tar\.gz/
     raise "invalid ruby version" unless m && m.captures.size == 3
     m.captures.map &:to_i
   end
