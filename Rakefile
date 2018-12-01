@@ -45,7 +45,7 @@ LIB_NAME    = "#{NAME}_#{PLATFORM}"
 
 ROOT_DIR     = __dir__
 INC_DIR      = "#{ROOT_DIR}/include"
-RUBY_DIR     = "#{ROOT_DIR}/ruby"
+RUBY_DIR     = "#{ROOT_DIR}/.ruby"
 BUILD_DIR    = "#{ROOT_DIR}/.build"
 OUTPUT_DIR   = "#{ROOT_DIR}/CRuby"
 
@@ -234,7 +234,7 @@ TARGETS.each do |sdk, archs|
             --disable-install-doc
           ]
           opts << "--with-arch=#{arch}" unless arch =~ /^arm/
-          sh %( #{envs.join ' '} #{CONFIGURE}  #{opts.join ' '} )
+          sh %( #{envs.join ' '} #{CONFIGURE} #{opts.join ' '} )
         end
       end
 
