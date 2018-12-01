@@ -1,12 +1,12 @@
 # -*- mode: ruby; coding: utf-8 -*-
 
 
-POD_VERSION = 1
+POD_VERSION = 2
 
 GITHUB_URL  = "https://github.com/xord/cruby"
 
-RUBY_URL    = 'https://cache.ruby-lang.org/pub/ruby/2.6/ruby-2.6.0-preview3.tar.gz'
-RUBY_SHA256 = '60243e3bd9661e37675009ab66ba63beacf5dec748885b9b93916909f965f27a'
+RUBY_URL    = 'https://cache.ruby-lang.org/pub/ruby/2.3/ruby-2.3.8.tar.gz'
+RUBY_SHA256 = 'b5016d61440e939045d4e22979e04708ed6c8e1c52e7edb2553cf40b73c59abf'
 
 
 module CRuby
