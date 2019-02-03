@@ -23,7 +23,7 @@ Pod::Spec.new do |s|
 
   s.preserve_paths      = "CRuby"
   s.requires_arc        = false
-  s.resource_bundles    = {"CRuby" => "ruby/lib"}
+  s.resource_bundles    = {"CRuby" => "CRuby/lib"}
   s.source_files        = "src/*.m"
   s.library             = "z"
   s.osx.library         = "#{s.name}_osx"
