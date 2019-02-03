@@ -5,8 +5,8 @@ POD_VERSION = 0
 
 GITHUB_URL  = "https://github.com/xord/cruby"
 
-RUBY_URL    = 'https://cache.ruby-lang.org/pub/ruby/2.6/ruby-2.6.0.tar.gz'
-RUBY_SHA256 = 'f3c35b924a11c88ff111f0956ded3cdc12c90c04b72b266ac61076d3697fc072'
+RUBY_URL    = 'https://cache.ruby-lang.org/pub/ruby/2.6/ruby-2.6.1.tar.gz'
+RUBY_SHA256 = '17024fb7bb203d9cf7a5a42c78ff6ce77140f9d083676044a7db67f1e5191cb8'
 
 
 module CRuby
