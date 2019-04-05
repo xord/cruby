@@ -11,8 +11,8 @@ GITHUB_URL  = "https://github.com/xord/cruby"
     sha256: '17024fb7bb203d9cf7a5a42c78ff6ce77140f9d083676044a7db67f1e5191cb8'
   },
   '2.5' => {
-    url:    'https://cache.ruby-lang.org/pub/ruby/2.5/ruby-2.5.3.tar.gz',
-    sha256: '9828d03852c37c20fa333a0264f2490f07338576734d910ee3fd538c9520846c'
+    url:    'https://cache.ruby-lang.org/pub/ruby/2.5/ruby-2.5.4.tar.gz',
+    sha256: '0e4042bce749352dfcf1b9e3013ba7c078b728f51f8adaf6470ce37675e3cb1f'
   },
   '2.4' => {
     url:    'https://cache.ruby-lang.org/pub/ruby/2.4/ruby-2.4.6.tar.gz',
