@@ -18,10 +18,6 @@ GITHUB_URL  = "https://github.com/xord/cruby"
     url:    'https://cache.ruby-lang.org/pub/ruby/2.4/ruby-2.4.5.tar.gz',
     sha256: '6737741ae6ffa61174c8a3dcdd8ba92bc38827827ab1d7ea1ec78bc3cefc5198'
   },
-  '2.3' => {
-    url:    'https://cache.ruby-lang.org/pub/ruby/2.3/ruby-2.3.8.tar.gz',
-    sha256: 'b5016d61440e939045d4e22979e04708ed6c8e1c52e7edb2553cf40b73c59abf'
-  }
 }['2.6'].tap {|ruby|
   RUBY_URL    = ruby[:url]
   RUBY_SHA256 = ruby[:sha256]
