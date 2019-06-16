@@ -35,7 +35,7 @@
 		ret = rb_funcallv(_value, symbol, (int) args.count, values);
 	}
 
-	return [[CRBValue alloc] initWithValue:ret];
+	return [[[CRBValue alloc] initWithValue:ret] autorelease];
 }
 
 - (CRBValue *)call:(NSString *)method
