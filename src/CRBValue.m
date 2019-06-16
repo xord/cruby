@@ -65,24 +65,44 @@
 
 - (NSInteger)toInt
 {
-	VALUE ret = [self call:@"to_i"].value;
-	return FIX2INT(ret);
+	VALUE i = [self call:@"to_i"].value;
+	return FIX2INT(i);
 }
 
 - (NSString *)toString
 {
-	VALUE ret = [self call:@"to_s"].value;
-	return [NSString stringWithUTF8String:StringValueCStr(ret)];
+	VALUE s = [self call:@"to_s"].value;
+	return [NSString stringWithUTF8String:StringValueCStr(s)];
 }
 
 - (NSArray *)toArray
 {
-	return @[];
+	VALUE a = [self call:@"to_a"].value;
+	if (a == Qnil) return nil;
+
+	NSMutableArray* result = [NSMutableArray array];
+	for (long i = 0, len = RARRAY_LEN(a); i < len; ++i)
+	{
+		CRBValue* value = [[[CRBValue alloc] initWithValue:RARRAY_AREF(a, i)] autorelease];
+		[result addObject:value];
+	}
+	return result;
 }
 
 - (NSDictionary *)toDictionary
 {
-	return @{};
+	VALUE a = [self call:@"to_a"].value;
+	if (a == Qnil) return nil;
+
+	NSMutableDictionary* result = [NSMutableDictionary dictionary];
+	for (long i = 0, len = RARRAY_LEN(a); i < len; ++i)
+	{
+		VALUE e = RARRAY_AREF(a, i);
+		CRBValue* key   = [[[CRBValue alloc] initWithValue:RARRAY_AREF(e, 0)] autorelease];
+		CRBValue* value = [[[CRBValue alloc] initWithValue:RARRAY_AREF(e, 1)] autorelease];
+		[result setObject:value forKey:[key toString]];
+	}
+	return result;
 }
 
 - (NSString *)inspect

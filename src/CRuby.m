@@ -130,6 +130,7 @@ static NSMutableDictionary *gExtensions = nil;
 {
 	int state = 0;
 	VALUE ret = rb_eval_string_protect(string.UTF8String, &state);
+
 	if (state != 0)
 	{
 		VALUE exception = rb_errinfo();
