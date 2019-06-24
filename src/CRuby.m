@@ -38,7 +38,7 @@ static NSMutableDictionary *gExtensions = nil;
 	if (done) return;
 	done = YES;
 
-	gExtensions = [NSMutableDictionary dictionary];
+	gExtensions = [[NSMutableDictionary alloc] init];
 
 	ruby_init();
 
