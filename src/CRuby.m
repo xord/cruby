@@ -170,12 +170,13 @@ static NSMutableDictionary *gExtensions = nil;
 + (BOOL)requireExtension:(NSString *)path
 {
 	id init = gExtensions[path];
-	if (!init || [init isEqual:[NSNull null]])
-		return NO;
+	if (!init) return NO;
 
-	((InitBlock) init)();
-
-	gExtensions[path] = [NSNull null];
+	if (![init isEqual:[NSNull null]])
+	{
+		gExtensions[path] = [NSNull null];
+		((InitBlock) init)();
+	}
 	return YES;
 }
 
