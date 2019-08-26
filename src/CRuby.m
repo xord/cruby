@@ -38,7 +38,7 @@ static NSMutableDictionary *gExtensions = nil;
 	if (done) return;
 	done = YES;
 
-	gExtensions = [NSMutableDictionary dictionary];
+	gExtensions = [[NSMutableDictionary alloc] init];
 
 	ruby_init();
 
@@ -130,6 +130,7 @@ static NSMutableDictionary *gExtensions = nil;
 {
 	int state = 0;
 	VALUE ret = rb_eval_string_protect(string.UTF8String, &state);
+
 	if (state != 0)
 	{
 		VALUE exception = rb_errinfo();
@@ -169,12 +170,13 @@ static NSMutableDictionary *gExtensions = nil;
 + (BOOL)requireExtension:(NSString *)path
 {
 	id init = gExtensions[path];
-	if (!init || [init isEqual:[NSNull null]])
-		return NO;
+	if (!init) return NO;
 
-	((InitBlock) init)();
-
-	gExtensions[path] = [NSNull null];
+	if (![init isEqual:[NSNull null]])
+	{
+		gExtensions[path] = [NSNull null];
+		((InitBlock) init)();
+	}
 	return YES;
 }
 
@@ -218,23 +220,23 @@ static NSMutableDictionary *gExtensions = nil;
 	void Init_syslog();
 	void Init_zlib();
 
-	//[self addExtension:@"bigdecimal"          init:^{Init_bigdecimal();}];
+	//[self addExtension:@"bigdecimal.so"       init:^{Init_bigdecimal();}];
 	[self addExtension:@"continuation"        init:^{Init_continuation();}];
 	[self addExtension:@"coverage"            init:^{Init_coverage();}];
 	[self addExtension:@"date_core"           init:^{Init_date_core();}];
 	[self addExtension:@"dbm"                 init:^{Init_dbm();}];
 	[self addExtension:@"digest/bubblebabble" init:^{Init_bubblebabble();}];
-	[self addExtension:@"digest"              init:^{Init_digest();}];
+	[self addExtension:@"digest.so"           init:^{Init_digest();}];
 	[self addExtension:@"digest/md5"          init:^{Init_md5();}];
 	[self addExtension:@"digest/rmd160"       init:^{Init_rmd160();}];
 	[self addExtension:@"digest/sha1"         init:^{Init_sha1();}];
-	[self addExtension:@"digest/sha2"         init:^{Init_sha2();}];
+	[self addExtension:@"digest/sha2.so"      init:^{Init_sha2();}];
 	//[self addExtension:@"dl/callback"         init:^{Init_callback();}];
 	//[self addExtension:@"dl"                  init:^{Init_dl();}];
-	[self addExtension:@"etc"                 init:^{Init_etc();}];
+	[self addExtension:@"etc.so"              init:^{Init_etc();}];
 	[self addExtension:@"fcntl"               init:^{Init_fcntl();}];
 	[self addExtension:@"fiber"               init:^{Init_fiber();}];
-	//[self addExtension:@"fiddle"              init:^{Init_fiddle();}];
+	//[self addExtension:@"fiddle.so"           init:^{Init_fiddle();}];
 	[self addExtension:@"io/console"          init:^{Init_console();}];
 	[self addExtension:@"io/nonblock"         init:^{Init_nonblock();}];
 	[self addExtension:@"io/wait"             init:^{Init_wait();}];
@@ -242,15 +244,15 @@ static NSMutableDictionary *gExtensions = nil;
 	[self addExtension:@"json/ext/parser"     init:^{Init_parser();}];
 	[self addExtension:@"nkf"                 init:^{Init_nkf();}];
 	[self addExtension:@"objspace"            init:^{Init_objspace();}];
-	[self addExtension:@"pathname"            init:^{Init_pathname();}];
-	[self addExtension:@"psych"               init:^{Init_psych();}];
+	[self addExtension:@"pathname.so"         init:^{Init_pathname();}];
+	[self addExtension:@"psych.so"            init:^{Init_psych();}];
 	[self addExtension:@"pty"                 init:^{Init_pty();}];
 	[self addExtension:@"racc/cparse"         init:^{Init_cparse();}];
 	[self addExtension:@"rbconfig/sizeof"     init:^{Init_sizeof();}];
 	//[self addExtension:@"readline"            init:^{Init_readline();}];
-	[self addExtension:@"ripper"              init:^{Init_ripper();}];
+	[self addExtension:@"ripper.so"           init:^{Init_ripper();}];
 	[self addExtension:@"sdbm"                init:^{Init_sdbm();}];
-	[self addExtension:@"socket"              init:^{Init_socket();}];
+	[self addExtension:@"socket.so"           init:^{Init_socket();}];
 	[self addExtension:@"stringio"            init:^{Init_stringio();}];
 	[self addExtension:@"strscan"             init:^{Init_strscan();}];
 	//[self addExtension:@"syslog"              init:^{Init_syslog();}];
