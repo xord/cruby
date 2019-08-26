@@ -13,6 +13,12 @@ def write_file (path, data)
   open(path, 'w') {|f| f.write data}
 end
 
+def modify_file (path, &block)
+  body     = read_file path
+  modified = block.call body.dup
+  write_file path, modified if modified != body
+end
+
 def download (url, path)
   puts "downloading '#{url}'..."
   write_file path, read_file(url)
@@ -239,9 +245,13 @@ TARGETS.each do |sdk, archs|
       end
 
       file config_h => [makefile, config_h_dir] do
-        src = Dir.glob "#{arch_dir}/.ext/include/**/ruby/config.h"
-        raise unless src.size == 1
-        sh %( cp #{src.first} #{config_h} )
+        src = Dir.glob("#{arch_dir}/.ext/include/**/ruby/config.h").first
+        raise unless src
+
+        # avoid crach on AdMob initialization.
+        modify_file(src) {|s| s.gsub /#define\s+HAVE_BACKTRACE\s+1/, '#undef HAVE_BACKTRACE'}
+
+        sh %( cp #{src} #{config_h} )
       end
 
       file libruby => makefile do
