@@ -52,20 +52,26 @@ LIB_NAME    = "#{NAME}_#{PLATFORM}"
 ROOT_DIR     = __dir__
 INC_DIR      = "#{ROOT_DIR}/include"
 RUBY_DIR     = "#{ROOT_DIR}/.ruby"
+OSSL_DIR     = "#{ROOT_DIR}/.openssl"
 BUILD_DIR    = "#{ROOT_DIR}/.build"
 OUTPUT_DIR   = "#{ROOT_DIR}/CRuby"
 
-CONFIGURE               = "#{RUBY_DIR}/configure"
+RUBY_CONFIGURE = "#{RUBY_DIR}/configure"
+OSSL_CONFIGURE = "#{OSSL_DIR}/Configure"
+
 NATIVE_RUBY_DIR         = "#{BUILD_DIR}/native"
 NATIVE_RUBY_INSTALL_DIR = "#{BUILD_DIR}/native-install"
 NATIVE_RUBY_BIN         = "#{NATIVE_RUBY_INSTALL_DIR}/bin/ruby"
+
+SYSTEM_RUBY_VER = RUBY_VERSION[/^(\d+\.\d+)\.\d+/, 1]
+ EMBED_RUBY_VER = CRuby.ruby_version[0..1].join('.')
+BASE_RUBY       = SYSTEM_RUBY_VER != EMBED_RUBY_VER ? NATIVE_RUBY_BIN : nil
 
 OUTPUT_LIB_NAME = "lib#{LIB_NAME}.a"
 OUTPUT_LIB_FILE = "#{OUTPUT_DIR}/#{OUTPUT_LIB_NAME}"
 OUTPUT_LIB_DIR  = "#{OUTPUT_DIR}/lib"
 OUTPUT_INC_DIR  = "#{OUTPUT_DIR}/include"
 
-RUBY_ARCHIVE     = "#{ROOT_DIR}/#{File.basename RUBY_URL}"
 OUTPUT_ARCHIVE   = "#{NAME}_prebuilt-#{CRuby.version}.tar.gz"
 PREBUILT_URL     = "#{GITHUB_URL}/releases/download/v#{CRuby.version}/#{OUTPUT_ARCHIVE}"
 PREBUILT_ARCHIVE = "downloaded_#{OUTPUT_ARCHIVE}"
@@ -80,6 +86,11 @@ TARGETS = {
   }
 }[PLATFORM]
 
+OSSL_CONFIGURATIONS = {
+  [:iphonesimulator, 'x86_64'] => 'iphoneos-cross',
+  [:iphoneos,        'arm64']  => 'ios64-cross'
+}
+
 PATHS = ENV['PATH']
 ENV['ac_cv_func_setpgrp_void'] = 'yes'
 
@@ -92,42 +103,52 @@ task :clean do
 end
 
 desc "delete all generated files"
-task :clobber => :clean do
-  sh %( rm -rf #{RUBY_ARCHIVE} #{RUBY_DIR} )
-end
+task :clobber => :clean
 
 desc "build"
 task :build => [OUTPUT_LIB_DIR, OUTPUT_INC_DIR, OUTPUT_LIB_FILE]
 
-directory RUBY_DIR
 directory BUILD_DIR
 directory OUTPUT_DIR
 directory NATIVE_RUBY_DIR
 
-file RUBY_ARCHIVE do |t|
-  download RUBY_URL, RUBY_ARCHIVE
+[
+  [RUBY_DIR, RUBY_URL, RUBY_CONFIGURE],
+  [OSSL_DIR, OSSL_URL, OSSL_CONFIGURE]
+].each do |dir, url, configure|
+  archive = "#{ROOT_DIR}/#{File.basename url}"
+
+  task :clobber do
+    sh %( rm -rf #{archive} #{dir} )
+  end
+
+  directory dir
+
+  file archive do
+    download url, archive
+  end
+
+  file configure => [dir, archive] do
+    sh %( tar xzf #{archive} -C #{dir} --strip=1 )
+    sh %( touch #{configure} )
+  end
 end
 
-file CONFIGURE => [RUBY_ARCHIVE, RUBY_DIR] do
-  sh %( tar xzf #{RUBY_ARCHIVE} -C #{RUBY_DIR} --strip=1 )
-  sh %( touch #{CONFIGURE} )
-end
-
-file NATIVE_RUBY_BIN => [CONFIGURE, NATIVE_RUBY_DIR] do
+file NATIVE_RUBY_BIN => [RUBY_CONFIGURE, NATIVE_RUBY_DIR] do
   chdir NATIVE_RUBY_DIR do
-    sh %( #{CONFIGURE} --prefix=#{NATIVE_RUBY_INSTALL_DIR} --disable-install-doc )
+    sh %( #{RUBY_CONFIGURE} --prefix=#{NATIVE_RUBY_INSTALL_DIR} --disable-install-doc )
     sh %( make && make install )
   end
 end
 
-file OUTPUT_LIB_DIR => [CONFIGURE, OUTPUT_DIR] do
+file OUTPUT_LIB_DIR => [RUBY_CONFIGURE, OUTPUT_DIR] do
   sh %( cp -rf #{RUBY_DIR}/lib #{OUTPUT_DIR} )
   Dir.glob "#{RUBY_DIR}/ext/*/lib" do |lib|
     sh %( cp -rf #{lib}/* #{OUTPUT_LIB_DIR} ) unless Dir.glob("#{lib}/*").empty?
   end
 end
 
-file OUTPUT_INC_DIR => [CONFIGURE, OUTPUT_DIR] do
+file OUTPUT_INC_DIR => [RUBY_CONFIGURE, OUTPUT_DIR] do
   sh %( cp -rf #{RUBY_DIR}/include #{OUTPUT_DIR} )
   sh %( cp -rf #{INC_DIR} #{OUTPUT_DIR})
 end
@@ -173,31 +194,39 @@ end
 
 
 TARGETS.each do |sdk, archs|
-  sdkroot = xcrun sdk, '--show-sdk-path'
-  path    = xcrun(sdk, '--find cc').sub %r|/cc$|i, ''
-  archs   = archs.select {|arch| ARCHS.include? arch} if ARCHS
+  sdk_root = xcrun sdk, '--show-sdk-path'
+  cc_dir   = File.dirname xcrun(sdk, '--find cc')
+  archs    = archs.select {|arch| ARCHS.include? arch} if ARCHS
 
   archs.each do |arch|
-    namespace arch do
-      arch_dir     = "#{BUILD_DIR}/#{sdk}_#{arch}"
-      makefile     = "#{arch_dir}/Makefile"
-      libruby_ver  = ruby25_or_higher? ? ".#{CRuby.ruby_version.join '.'}" : ""
-      libruby      = "#{arch_dir}/libruby#{libruby_ver}-static.a"
-      lib_file     = "#{arch_dir}/#{OUTPUT_LIB_NAME}"
+    build_dir = "#{BUILD_DIR}/#{sdk}_#{arch}"
+    ruby_dir  = "#{build_dir}/ruby"
+    ossl_dir  = "#{build_dir}/openssl"
+
+    libruby_ver = ruby25_or_higher? ? ".#{CRuby.ruby_version.join '.'}" : ""
+    libruby     = "#{ruby_dir}/libruby#{libruby_ver}-static.a"
+    libossl     = "#{ossl_dir}/libssl.a"
+    lib_file    = "#{build_dir}/#{OUTPUT_LIB_NAME}"
+
+    ossl_install_dir = "#{build_dir}/openssl-install"
+    ossl_config_h    = "#{ossl_install_dir}/include/opensslconf.h"
+
+    namespace :ruby do
       config_h     = "#{OUTPUT_INC_DIR}/ruby/config-#{PLATFORM}_#{arch}.h"
       config_h_dir = File.dirname config_h
+      makefile     = "#{ruby_dir}/Makefile"
       host         = "#{arch =~ /^arm/ ? 'arm' : arch}-apple-darwin"
-      flags        = "-pipe -Os -isysroot #{sdkroot}"
+      flags        = "-pipe -Os -isysroot #{sdk_root}"
       flags << " -miphoneos-version-min=7.0" if PLATFORM == :ios
       # -gdwarf-2 -no-cpp-precomp -mthumb
 
-      directory arch_dir
+      directory ruby_dir
       directory config_h_dir
 
       missing_headers = []
       if PLATFORM == :ios
-        arch_inc_dir = "#{arch_dir}/include"
-        vnode_h      = "#{arch_inc_dir}/sys/vnode.h"
+        ruby_inc_dir = "#{ruby_dir}/include"
+        vnode_h      = "#{ruby_inc_dir}/sys/vnode.h"
         vnode_h_dir = File.dirname vnode_h
 
         directory vnode_h_dir
@@ -212,13 +241,15 @@ TARGETS.each do |sdk, archs|
         end
 
         missing_headers += [vnode_h]
-        flags           += " -I#{arch_inc_dir}"
+        flags           += " -I#{ruby_inc_dir}"
       end
 
-      file makefile => [CONFIGURE, NATIVE_RUBY_BIN, arch_dir, *missing_headers] do
-        chdir arch_dir do
+      makefile_dep = [RUBY_CONFIGURE, ruby_dir, ossl_config_h, *missing_headers]
+      makefile_dep << BASE_RUBY if BASE_RUBY
+      file makefile => makefile_dep do
+        chdir ruby_dir do
           envs = {
-            'PATH'     => "#{path}:#{PATHS}",
+            'PATH'     => "#{cc_dir}:#{PATHS}",
             'CPP'      => "clang -arch #{arch} -E",
             'CC'       => "clang -arch #{arch}",
             'CXXCPP'   => "clang++ -arch #{arch} -E",
@@ -226,60 +257,103 @@ TARGETS.each do |sdk, archs|
             'CPPFLAGS' => "#{flags}",
             'CFLAGS'   => "#{flags} -fvisibility=hidden",
             'CXXFLAGS' => "-fvisibility-inline-hidden",
-            'LDFLAGS'  => "#{flags} -L#{sdkroot}/usr/lib -lSystem"
+            'LDFLAGS'  => "#{flags} -L#{sdk_root}/usr/lib -lSystem"
           }.map {|k, v| "#{k}='#{v}'"}
           opts = %W[
             --host=#{host}
             --disable-shared
-            --with-baseruby=#{NATIVE_RUBY_BIN}
+            --disable-dln
+            --disable-jit-support
+            --disable-install-doc
+            --with-openssl-dir=#{ossl_install_dir}
             --with-static-linked-ext
             --without-tcl
             --without-tk
             --without-fiddle
             --without-bigdecimal
-            --disable-install-doc
           ]
           opts << "--with-arch=#{arch}" unless arch =~ /^arm/
-          sh %( #{envs.join ' '} #{CONFIGURE} #{opts.join ' '} )
+          opts << "--with-baseruby=#{BASE_RUBY}" if BASE_RUBY
+          sh %( #{envs.join ' '} #{RUBY_CONFIGURE} #{opts.join ' '} )
         end
       end
 
       file config_h => [makefile, config_h_dir] do
-        src = Dir.glob("#{arch_dir}/.ext/include/**/ruby/config.h").first
+        src = Dir.glob("#{ruby_dir}/.ext/include/**/ruby/config.h").first
         raise unless src
 
         # avoid crach on AdMob initialization.
-        modify_file(src) {|s| s.gsub /#define\s+HAVE_BACKTRACE\s+1/, '#undef HAVE_BACKTRACE'}
+        modify_file src do |s|
+          s.gsub /#define\s+HAVE_BACKTRACE\s+1/, '#undef HAVE_BACKTRACE'
+        end
 
         sh %( cp #{src} #{config_h} )
       end
 
-      file libruby => makefile do
-        chdir arch_dir do
+      file libruby => [makefile, config_h] do
+        chdir ruby_dir do
           sh %( make )
         end
       end
+    end# ruby
 
-      file lib_file => [config_h, libruby] do
-        chdir arch_dir do
-          Dir.glob("#{arch_dir}/**/*.a") do |path|
-            extract_dir = '.' + OUTPUT_LIB_NAME
-            libfile_dir = path[%r|#{arch_dir}/(.+)\.a$|, 1]
-            objs_dir    = "#{extract_dir}/#{libfile_dir}"
+    namespace :openssl do
+      conf = OSSL_CONFIGURATIONS[[sdk, arch]]
+      envs = {
+        CROSS_COMPILE: "#{cc_dir}/",
+        CROSS_TOP:     "#{xcrun sdk, '--show-sdk-platform-path'}/Developer",
+        CROSS_SDK:     File.basename(sdk_root)
+      }.map {|k, v| "#{k}=#{v}"}
 
-            sh %( mkdir -p #{objs_dir} && cp #{path} #{objs_dir} )
-            chdir objs_dir do
-              sh %( ar x #{File.basename path} )
-            end
-          end
+      directory ossl_dir
+      directory ossl_install_dir
 
-          objs = Dir.glob "**/*.o"
-          sh %( ar -crs #{lib_file} #{objs.join ' '} )
+      file libossl => [OSSL_CONFIGURE, ossl_dir] do
+        next unless conf
+        chdir ossl_dir do
+          opts = %W[
+            --prefix=#{ossl_install_dir}
+            no-shared
+          ]
+          sh %( #{envs.join ' '} #{OSSL_CONFIGURE} #{opts.join ' '} #{conf} )
+          sh %( #{envs.join ' '} make )
         end
       end
 
-      file OUTPUT_LIB_FILE => lib_file
+      file ossl_config_h => [libossl, ossl_install_dir] do
+        next unless conf
+        chdir ossl_dir do
+          sh %( make install | grep include )
+        end
+      end
+    end# openssl
 
-    end# arch
-  end
+    file lib_file => [libruby, libossl] do
+      extract_dir = "#{build_dir}/.#{OUTPUT_LIB_NAME}"
+      excludes    = %w[/openssl/apps/ /openssl/test/]
+
+      [ruby_dir, ossl_dir]
+        .map {|dir| Dir.glob "#{dir}/**/*.a"}
+        .flatten
+        .reject {|path| excludes.any? {|s| path.include? s}}
+        .each do |path|
+
+        a_dir    = path[%r|#{build_dir}/(.+)\.a$|, 1]
+        objs_dir = "#{extract_dir}/#{a_dir}"
+
+        sh %( mkdir -p #{objs_dir} && cp #{path} #{objs_dir} )
+        chdir objs_dir do
+          sh %( ar x #{File.basename path} )
+        end
+      end
+
+      chdir build_dir do
+        objs = Dir.glob "#{extract_dir}/**/*.o"
+        sh %( ar -crs #{lib_file} #{objs.join ' '} )
+      end
+    end
+
+    file OUTPUT_LIB_FILE => lib_file
+
+  end# arch
 end
