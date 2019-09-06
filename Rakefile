@@ -75,8 +75,8 @@ TARGETS = {
     macosx:          %w[x86_64],
   },
   ios: {
-    iphonesimulator: %w[x86_64 i386],
-    iphoneos:        %w[armv7 armv7s arm64]
+    iphonesimulator: %w[x86_64],
+    iphoneos:        %w[arm64]
   }
 }[PLATFORM]
 
