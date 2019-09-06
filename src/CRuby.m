@@ -45,12 +45,13 @@ static NSMutableDictionary *gExtensions = nil;
 	[self setupStandardExtensions];
 	[self addLibrary:@"CRuby" bundle:[NSBundle bundleForClass:CRuby.class]];
 
-	rb_define_global_function("require_extension", require_extension, -1);
+	VALUE mCRuby = rb_define_module("CRuby");
+	rb_define_module_function(mCRuby, "require_extension", require_extension, -1);
 
 	[self eval:@
 		"alias require_original require;"
 		"def require (*args)"
-		"  require_extension(*args) || require_original(*args);"
+		"  CRuby.require_extension(*args) || require_original(*args);"
 		"end"];
 
 	void Init_encdb();
