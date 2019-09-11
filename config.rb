@@ -5,11 +5,11 @@ POD_VERSION = 3
 
 GITHUB_URL  = "https://github.com/xord/cruby"
 
-RUBY_URL    = 'https://cache.ruby-lang.org/pub/ruby/2.6/ruby-2.6.3.tar.gz'
-RUBY_SHA256 = '577fd3795f22b8d91c1d4e6733637b0394d4082db659fccf224c774a2b1c82fb'
+RUBY_URL    = 'https://cache.ruby-lang.org/pub/ruby/2.6/ruby-2.6.4.tar.gz'
+RUBY_SHA256 = '4fc1d8ba75505b3797020a6ffc85a8bcff6adc4dabae343b6572bf281ee17937'
 
-OSSL_URL    = 'https://www.openssl.org/source/openssl-1.1.1c.tar.gz'
-OSSL_SHA256 = 'f6fb3079ad15076154eda9413fed42877d668e7069d9b87396d0804fdb3f4c90'
+OSSL_URL    = 'https://www.openssl.org/source/openssl-1.1.1d.tar.gz'
+OSSL_SHA256 = '1e3a91bc1f9dfce01af26026f856e064eab4c8ee0a8f457b5ae30b40b8b711f2'
 
 
 module CRuby
