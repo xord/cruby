@@ -350,7 +350,7 @@ TARGETS.each do |sdk, archs|
 
       chdir build_dir do
         objs =
-          Dir.glob "#{extract_dir}/**/*.o"
+          Dir.glob("#{extract_dir}/**/*.o")
           .reject {|path| excludes.any? {|s| path.include? s}}
         sh %( ar -crs #{lib_file} #{objs.join ' '} #{extra_objs.join ' '} )
       end
