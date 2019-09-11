@@ -42,7 +42,11 @@ static NSMutableDictionary *gExtensions = nil;
 
 	ruby_init();
 
-	[self setupStandardExtensions];
+	void Init_enc();
+	void Init_ext();
+	Init_enc();
+	Init_ext();
+
 	[self addLibrary:@"CRuby" bundle:[NSBundle bundleForClass:CRuby.class]];
 
 	VALUE mCRuby = rb_define_module("CRuby");
@@ -53,9 +57,6 @@ static NSMutableDictionary *gExtensions = nil;
 		"def require (*args)"
 		"  CRuby.require_extension(*args) || require_original(*args);"
 		"end"];
-
-	void Init_encdb();
-	Init_encdb();
 }
 
 + (void)finalize
@@ -179,85 +180,6 @@ static NSMutableDictionary *gExtensions = nil;
 		((InitBlock) init)();
 	}
 	return YES;
-}
-
-+ (void)setupStandardExtensions
-{
-	void Init_bigdecimal();
-	void Init_continuation();
-	void Init_coverage();
-	void Init_date_core();
-	void Init_dbm();
-	void Init_bubblebabble();
-	void Init_digest();
-	void Init_md5();
-	void Init_rmd160();
-	void Init_sha1();
-	void Init_sha2();
-	void Init_callback();
-	void Init_dl();
-	void Init_etc();
-	void Init_fcntl();
-	void Init_fiber();
-	void Init_fiddle();
-	void Init_console();
-	void Init_nonblock();
-	void Init_wait();
-	void Init_generator();
-	void Init_parser();
-	void Init_nkf();
-	void Init_objspace();
-	void Init_pathname();
-	void Init_psych();
-	void Init_pty();
-	void Init_cparse();
-	void Init_sizeof();
-	void Init_readline();
-	void Init_ripper();
-	void Init_sdbm();
-	void Init_socket();
-	void Init_stringio();
-	void Init_strscan();
-	void Init_syslog();
-	void Init_zlib();
-
-	//[self addExtension:@"bigdecimal.so"       init:^{Init_bigdecimal();}];
-	[self addExtension:@"continuation"        init:^{Init_continuation();}];
-	[self addExtension:@"coverage"            init:^{Init_coverage();}];
-	[self addExtension:@"date_core"           init:^{Init_date_core();}];
-	[self addExtension:@"dbm"                 init:^{Init_dbm();}];
-	[self addExtension:@"digest/bubblebabble" init:^{Init_bubblebabble();}];
-	[self addExtension:@"digest.so"           init:^{Init_digest();}];
-	[self addExtension:@"digest/md5"          init:^{Init_md5();}];
-	[self addExtension:@"digest/rmd160"       init:^{Init_rmd160();}];
-	[self addExtension:@"digest/sha1"         init:^{Init_sha1();}];
-	[self addExtension:@"digest/sha2.so"      init:^{Init_sha2();}];
-	//[self addExtension:@"dl/callback"         init:^{Init_callback();}];
-	//[self addExtension:@"dl"                  init:^{Init_dl();}];
-	[self addExtension:@"etc.so"              init:^{Init_etc();}];
-	[self addExtension:@"fcntl"               init:^{Init_fcntl();}];
-	[self addExtension:@"fiber"               init:^{Init_fiber();}];
-	//[self addExtension:@"fiddle.so"           init:^{Init_fiddle();}];
-	[self addExtension:@"io/console"          init:^{Init_console();}];
-	[self addExtension:@"io/nonblock"         init:^{Init_nonblock();}];
-	[self addExtension:@"io/wait"             init:^{Init_wait();}];
-	[self addExtension:@"json/ext/generator"  init:^{Init_generator();}];
-	[self addExtension:@"json/ext/parser"     init:^{Init_parser();}];
-	[self addExtension:@"nkf"                 init:^{Init_nkf();}];
-	[self addExtension:@"objspace"            init:^{Init_objspace();}];
-	[self addExtension:@"pathname.so"         init:^{Init_pathname();}];
-	[self addExtension:@"psych.so"            init:^{Init_psych();}];
-	[self addExtension:@"pty"                 init:^{Init_pty();}];
-	[self addExtension:@"racc/cparse"         init:^{Init_cparse();}];
-	[self addExtension:@"rbconfig/sizeof"     init:^{Init_sizeof();}];
-	//[self addExtension:@"readline"            init:^{Init_readline();}];
-	[self addExtension:@"ripper.so"           init:^{Init_ripper();}];
-	[self addExtension:@"sdbm"                init:^{Init_sdbm();}];
-	[self addExtension:@"socket.so"           init:^{Init_socket();}];
-	[self addExtension:@"stringio"            init:^{Init_stringio();}];
-	[self addExtension:@"strscan"             init:^{Init_strscan();}];
-	//[self addExtension:@"syslog"              init:^{Init_syslog();}];
-	[self addExtension:@"zlib"                init:^{Init_zlib();}];
 }
 
 @end

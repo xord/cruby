@@ -265,8 +265,8 @@ TARGETS.each do |sdk, archs|
             --disable-dln
             --disable-jit-support
             --disable-install-doc
-            --with-openssl-dir=#{ossl_install_dir}
             --with-static-linked-ext
+            --with-openssl-dir=#{ossl_install_dir}
             --without-tcl
             --without-tk
             --without-fiddle
@@ -330,7 +330,8 @@ TARGETS.each do |sdk, archs|
 
     file lib_file => [libruby, libossl] do
       extract_dir = "#{build_dir}/.#{OUTPUT_LIB_NAME}"
-      excludes    = %w[/openssl/apps/ /openssl/test/]
+      excludes    = %w[dmyenc.o dmyext.o /openssl/apps/ /openssl/test/]
+      extra_objs  = %w[enc ext].map {|s| "#{ruby_dir}/#{s}/#{s}init.o"}
 
       [ruby_dir, ossl_dir]
         .map {|dir| Dir.glob "#{dir}/**/*.a"}
@@ -348,8 +349,10 @@ TARGETS.each do |sdk, archs|
       end
 
       chdir build_dir do
-        objs = Dir.glob "#{extract_dir}/**/*.o"
-        sh %( ar -crs #{lib_file} #{objs.join ' '} )
+        objs =
+          Dir.glob "#{extract_dir}/**/*.o"
+          .reject {|path| excludes.any? {|s| path.include? s}}
+        sh %( ar -crs #{lib_file} #{objs.join ' '} #{extra_objs.join ' '} )
       end
     end
 
