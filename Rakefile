@@ -209,7 +209,7 @@ TARGETS.each do |sdk, archs|
     lib_file    = "#{build_dir}/#{OUTPUT_LIB_NAME}"
 
     ossl_install_dir = "#{build_dir}/openssl-install"
-    ossl_config_h    = "#{ossl_install_dir}/include/opensslconf.h"
+    ossl_config_h    = "#{ossl_install_dir}/include/openssl/opensslconf.h"
 
     namespace :ruby do
       config_h     = "#{OUTPUT_INC_DIR}/ruby/config-#{PLATFORM}_#{arch}.h"
