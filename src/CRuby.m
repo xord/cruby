@@ -44,8 +44,10 @@ static NSMutableDictionary *gExtensions = nil;
 
 	void Init_enc();
 	void Init_ext();
+	void Init_prelude();
 	Init_enc();
 	Init_ext();
+	Init_prelude();
 
 	[self addLibrary:@"CRuby" bundle:[NSBundle bundleForClass:CRuby.class]];
 
