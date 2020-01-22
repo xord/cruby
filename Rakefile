@@ -284,9 +284,14 @@ TARGETS.each do |sdk, archs|
 
         # avoid crach on AdMob initialization.
         modify_file src do |s|
-          s.gsub /#define\s+HAVE_BACKTRACE\s+1/, '#undef HAVE_BACKTRACE'
-          s.gsub /#define\s+HAVE_SYSCALL\s+1/,   '#undef HAVE_SYSCALL'
-          s.gsub /#define\s+HAVE___SYSCALL\s+1/, '#undef HAVE___SYSCALL'
+          %w[
+            HAVE_BACKTRACE
+            HAVE_SYSCALL
+            HAVE___SYSCALL
+          ].each do |macro|
+            s = s.gsub /#define\s+#{macro}\s+1/, "#undef #{macro}"
+          end
+          s
         end
 
         sh %( cp #{src} #{config_h} )
