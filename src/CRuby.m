@@ -55,9 +55,11 @@ static NSMutableDictionary *gExtensions = nil;
 	rb_define_module_function(mCRuby, "require_extension", require_extension, -1);
 
 	[self eval:@
-		"alias require_original require;"
-		"def require (*args)"
-		"  CRuby.require_extension(*args) || require_original(*args);"
+		"module Kernel;"
+		"  alias cruby_require__ require;"
+		"  def require (*args);"
+		"    CRuby.require_extension(*args) || cruby_require__(*args);"
+		"  end;"];
 		"end"];
 }
 
