@@ -59,7 +59,7 @@ static NSMutableDictionary *gExtensions = nil;
 		"  alias cruby_require__ require;"
 		"  def require (*args);"
 		"    CRuby.require_extension(*args) || cruby_require__(*args);"
-		"  end;"];
+		"  end;"
 		"end"];
 }
 
