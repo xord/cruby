@@ -217,7 +217,7 @@ TARGETS.each do |sdk, archs|
       makefile     = "#{ruby_dir}/Makefile"
       host         = "#{arch =~ /^arm/ ? 'arm' : arch}-apple-darwin"
       flags        = "-pipe -Os -isysroot #{sdk_root}"
-      flags << " -miphoneos-version-min=7.0" if PLATFORM == :ios
+      flags << " -miphoneos-version-min=10.0" if PLATFORM == :ios
       # -gdwarf-2 -no-cpp-precomp -mthumb
 
       directory ruby_dir

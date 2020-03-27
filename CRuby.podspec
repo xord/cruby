@@ -17,7 +17,7 @@ Pod::Spec.new do |s|
   END
 
   s.osx.deployment_target = "10.7"
-  s.ios.deployment_target = "7.0"
+  s.ios.deployment_target = "10.0"
 
   root = "${PODS_ROOT}/#{s.name}"
 

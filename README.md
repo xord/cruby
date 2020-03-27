@@ -10,7 +10,7 @@ CocoaPod です。
 CRuby を使いたい Xcode プロジェクトに以下の Podfile を用意します。
 
 ```
-platform :ios, '7.0'
+platform :ios, '10.0'
 pod 'CRuby', git: 'https://github.com/xord/cruby'
 ```
 
