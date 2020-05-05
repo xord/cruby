@@ -149,7 +149,7 @@ static NSMutableDictionary *gExtensions = nil;
 			rb_jump_tag(state);
 	}
 
-	return [[CRBValue alloc] initWithValue:ret];
+	return ret == Qnil ? nil : [[CRBValue alloc] initWithValue:ret];
 }
 
 + (void)addLibrary:(NSString *)name bundle:(NSBundle *)bundle
