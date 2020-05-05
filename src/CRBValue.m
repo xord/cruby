@@ -58,15 +58,66 @@
 	return [self call:method args:@[arg1, arg2, arg3]];
 }
 
+- (BOOL)isNil
+{
+	return NIL_P(_value);
+}
+
+- (BOOL)isInteger
+{
+	return FIXNUM_P(_value)      ||
+		self.type == RUBY_T_BIGNUM ||
+		[self isKindOf:rb_cInteger];
+}
+
+- (BOOL)isFloat
+{
+	return RB_FLOAT_TYPE_P(_value) || [self isKindOf:rb_cFloat];
+}
+
+- (BOOL)isString
+{
+	return SYMBOL_P(_value)      ||
+		self.type == RUBY_T_STRING ||
+		[self isKindOf:rb_cSymbol] ||
+		[self isKindOf:rb_cString];
+}
+
+- (BOOL)isArray
+{
+	return self.type == RUBY_T_ARRAY || [self isKindOf:rb_cArray];
+}
+
+- (BOOL)isDictionary
+{
+	return self.type == RUBY_T_HASH || [self isKindOf:rb_cHash];
+}
+
+- (BOOL)isKindOf:(VALUE)type
+{
+	return rb_obj_is_kind_of(_value, type);
+}
+
+- (int)type
+{
+	return TYPE(_value);
+}
+
 - (BOOL)toBOOL
 {
 	return RTEST(_value) ? YES : NO;
 }
 
-- (NSInteger)toInt
+- (NSInteger)toInteger
 {
 	VALUE i = [self call:@"to_i"].value;
-	return FIX2INT(i);
+	return NUM2INT(i);
+}
+
+- (double)toFloat
+{
+	VALUE f = [self call:@"to_f"].value;
+	return RFLOAT_VALUE(f);
 }
 
 - (NSString *)toString
