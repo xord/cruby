@@ -1,4 +1,4 @@
-# CRuby (MRI) interpreter module for CocoaPods.
+# CRuby (MRI) Interpreter for macOS and iOS
 
 CRuby のインタプリタを簡単に OSX/iOS アプリ内で利用出来るようにする
 CocoaPod です。
