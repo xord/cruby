@@ -12,10 +12,10 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2
 
-      - name: ruby 2.6
+      - name: ruby 2.7
         uses: actions/setup-ruby@v1
         with:
-          ruby-version: 2.6.x
+          ruby-version: 2.7.x
 
       - name: version
         id: version
