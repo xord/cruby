@@ -1,0 +1,47 @@
+name: Release
+
+on:
+  push:
+    tags: ['v[0-9]*']
+
+jobs:
+  release:
+    runs-on: macos-latest
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+
+      - name: ruby 2.6
+        uses: actions/setup-ruby@v1
+        with:
+          ruby-version: 2.6.x
+
+      - name: version
+        id: version
+        run: |
+          echo ::set-output name=value::$(ruby -e 'print "${{ github.ref }}"[/\/v([\w\.\-]+)/, 1]')
+
+      - name: archive
+        run: rake clean archive
+
+      - name: create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: upload
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./CRuby_prebuilt-${{ steps.version.outputs.value }}.tar.gz
+          asset_name:   CRuby_prebuilt-${{ steps.version.outputs.value }}.tar.gz
+          asset_content_type: application/zip
