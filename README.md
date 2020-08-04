@@ -3,7 +3,7 @@
 CRuby のインタプリタを簡単に OSX/iOS アプリ内で利用出来るようにする
 CocoaPod です。
 
-[![Build Status](https://travis-ci.org/xord/cruby.svg?branch=master)](https://travis-ci.org/xord/cruby)
+![Build](https://github.com/xord/cruby/workflows/Build/badge.svg)
 
 # 使い方
 
