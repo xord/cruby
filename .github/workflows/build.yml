@@ -9,9 +9,17 @@ on:
 jobs:
   build:
     runs-on: macos-latest
+
     steps:
-    - uses: actions/checkout@v2
-    - name: ios
-      run: rake ios
-    - name: osx
-      run: rake osx
+      - uses: actions/checkout@v2
+
+      - name: ruby 2.6
+        uses: actions/setup-ruby@v1
+        with:
+          ruby-version: 2.6.x
+
+      - name: ios
+        run: rake ios
+
+      - name: osx
+        run: rake osx
