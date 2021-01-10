@@ -59,9 +59,12 @@ OUTPUT_DIR   = "#{ROOT_DIR}/CRuby"
 RUBY_CONFIGURE = "#{RUBY_DIR}/configure"
 OSSL_CONFIGURE = "#{OSSL_DIR}/Configure"
 
-NATIVE_RUBY_DIR         = "#{BUILD_DIR}/native"
-NATIVE_RUBY_INSTALL_DIR = "#{BUILD_DIR}/native-install"
+NATIVE_RUBY_DIR         = "#{BUILD_DIR}/native/ruby"
+NATIVE_OSSL_DIR         = "#{BUILD_DIR}/native/openssl"
+NATIVE_RUBY_INSTALL_DIR = "#{BUILD_DIR}/native/ruby-install"
+NATIVE_OSSL_INSTALL_DIR = "#{BUILD_DIR}/native/openssl-install"
 NATIVE_RUBY_BIN         = "#{NATIVE_RUBY_INSTALL_DIR}/bin/ruby"
+NATIVE_OSSL_LIB         = "#{NATIVE_OSSL_INSTALL_DIR}/libssl.a"
 
 SYSTEM_RUBY_VER = RUBY_VERSION[/^(\d+\.\d+)\.\d+/, 1]
  EMBED_RUBY_VER = CRuby.ruby_version[0..1].join('.')
@@ -111,6 +114,7 @@ task :build => [OUTPUT_LIB_DIR, OUTPUT_INC_DIR, OUTPUT_LIB_FILE]
 directory BUILD_DIR
 directory OUTPUT_DIR
 directory NATIVE_RUBY_DIR
+directory NATIVE_OSSL_DIR
 
 [
   [RUBY_DIR, RUBY_URL, RUBY_CONFIGURE],
@@ -134,9 +138,20 @@ directory NATIVE_RUBY_DIR
   end
 end
 
-file NATIVE_RUBY_BIN => [RUBY_CONFIGURE, NATIVE_RUBY_DIR] do
+file NATIVE_RUBY_BIN => [RUBY_CONFIGURE, NATIVE_RUBY_DIR, NATIVE_OSSL_LIB] do
   chdir NATIVE_RUBY_DIR do
-    sh %( #{RUBY_CONFIGURE} --prefix=#{NATIVE_RUBY_INSTALL_DIR} --disable-install-doc )
+    opts = {
+      'prefix'           => NATIVE_RUBY_INSTALL_DIR,
+      'with-openssl-dir' => NATIVE_OSSL_INSTALL_DIR
+    }.map {|k, v| "--#{k}=#{v}"}
+    sh %( #{RUBY_CONFIGURE} #{opts.join ' '} --disable-install-doc )
+    sh %( make && make install )
+  end
+end
+
+file NATIVE_OSSL_LIB => [OSSL_CONFIGURE, NATIVE_OSSL_DIR] do
+  chdir NATIVE_OSSL_DIR do
+    sh %( #{OSSL_DIR}/config --prefix=#{NATIVE_OSSL_INSTALL_DIR} )
     sh %( make && make install )
   end
 end
@@ -211,20 +226,29 @@ TARGETS.each do |sdk, archs|
     ossl_install_dir = "#{build_dir}/openssl-install"
     ossl_config_h    = "#{ossl_install_dir}/include/openssl/opensslconf.h"
 
+    ios = PLATFORM == :ios
+    arm = arch =~ /^arm/
+
     namespace :ruby do
       config_h     = "#{OUTPUT_INC_DIR}/ruby/config-#{PLATFORM}_#{arch}.h"
       config_h_dir = File.dirname config_h
       makefile     = "#{ruby_dir}/Makefile"
-      host         = "#{arch =~ /^arm/ ? 'arm' : arch}-apple-darwin"
+      host         = "#{arm ? 'arm' : arch}-#{ios ? 'iphone' : 'apple'}-darwin"
       flags        = "-pipe -Os -isysroot #{sdk_root}"
-      flags << " -miphoneos-version-min=10.0" if PLATFORM == :ios
       # -gdwarf-2 -no-cpp-precomp -mthumb
+
+      if ios
+        flags << " -miphoneos-version-min=10.0"
+
+        # to skip checking macos version
+        flags << " -DMAC_OS_X_VERSION_MIN_REQUIRED=MAC_OS_X_VERSION_10_5"
+      end
 
       directory ruby_dir
       directory config_h_dir
 
       missing_headers = []
-      if PLATFORM == :ios
+      if ios
         ruby_inc_dir = "#{ruby_dir}/include"
         vnode_h      = "#{ruby_inc_dir}/sys/vnode.h"
         vnode_h_dir = File.dirname vnode_h
@@ -272,7 +296,7 @@ TARGETS.each do |sdk, archs|
             --without-fiddle
             --without-bigdecimal
           ]
-          opts << "--with-arch=#{arch}" unless arch =~ /^arm/
+          opts << "--with-arch=#{arch}" unless arm
           opts << "--with-baseruby=#{BASE_RUBY}" if BASE_RUBY
           sh %( #{envs.join ' '} #{RUBY_CONFIGURE} #{opts.join ' '} )
         end
