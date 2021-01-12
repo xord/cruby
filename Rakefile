@@ -21,7 +21,7 @@ end
 
 def download (url, path)
   puts "downloading '#{url}'..."
-  write_file path, read_file(url)
+  write_file path, URI.open(url) {|f| f.read}
 end
 
 def chdir (dir = RUBY_DIR, &block)
