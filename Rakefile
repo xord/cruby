@@ -90,6 +90,7 @@ TARGETS = {
 }[PLATFORM]
 
 OSSL_CONFIGURATIONS = {
+  [:macosx,          'x86_64'] => 'default',
   [:iphonesimulator, 'x86_64'] => 'iphoneos-cross',
   [:iphoneos,        'arm64']  => 'ios64-cross'
 }
@@ -214,18 +215,16 @@ TARGETS.each do |sdk, archs|
   archs    = archs.select {|arch| ARCHS.include? arch} if ARCHS
 
   archs.each do |arch|
-    use_native_ossl = !OSSL_CONFIGURATIONS[[sdk, arch]]
-
     build_dir = "#{BUILD_DIR}/#{sdk}_#{arch}"
     ruby_dir  = "#{build_dir}/ruby"
-    ossl_dir  = use_native_ossl ? NATIVE_OSSL_DIR : "#{build_dir}/openssl"
+    ossl_dir  = "#{build_dir}/openssl"
 
     libruby_ver = ruby25_or_higher? ? ".#{CRuby.ruby_version.join '.'}" : ""
     libruby     = "#{ruby_dir}/libruby#{libruby_ver}-static.a"
     libossl     = "#{ossl_dir}/libssl.a"
     lib_file    = "#{build_dir}/#{OUTPUT_LIB_NAME}"
 
-    ossl_install_dir = "#{ossl_dir}-install"
+    ossl_install_dir = "#{build_dir}/openssl-install"
     ossl_config_h    = "#{ossl_install_dir}/include/openssl/opensslconf.h"
 
     ios = PLATFORM == :ios
@@ -344,11 +343,17 @@ TARGETS.each do |sdk, archs|
       file libossl => [OSSL_CONFIGURE, ossl_dir] do
         next unless conf
         chdir ossl_dir do
-          opts = %W[
+          configure = OSSL_CONFIGURE
+          opts      = %W[
             --prefix=#{ossl_install_dir}
             no-shared
           ]
-          sh %( #{envs.join ' '} #{OSSL_CONFIGURE} #{opts.join ' '} #{conf} )
+          if conf == 'default'
+            configure = configure.sub(/Configure$/, 'config')
+            conf      = ''
+            envs.clear
+          end
+          sh %( #{envs.join ' '} #{configure} #{opts.join ' '} #{conf} )
           sh %( #{envs.join ' '} make )
         end
       end
