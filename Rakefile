@@ -153,7 +153,7 @@ end
 file NATIVE_OSSL_LIB => [OSSL_CONFIGURE, NATIVE_OSSL_DIR] do
   chdir NATIVE_OSSL_DIR do
     sh %( #{OSSL_DIR}/config --prefix=#{NATIVE_OSSL_INSTALL_DIR} )
-    sh %( make && make install )
+    sh %( make && make install_sw )
   end
 end
 
@@ -361,7 +361,7 @@ TARGETS.each do |sdk, archs|
       file ossl_config_h => [libossl, ossl_install_dir] do
         next unless conf
         chdir ossl_dir do
-          sh %( make install | grep include )
+          sh %( make install_sw | grep include )
         end
       end
     end# openssl
