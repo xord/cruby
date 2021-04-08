@@ -1,27 +1,26 @@
-# CRuby (MRI) Interpreter for macOS and iOS
+# CRuby Interpreter for macOS and iOS
 
-CRuby のインタプリタを簡単に OSX/iOS アプリ内で利用出来るようにする
-CocoaPod です。
+This library allows you to embed CRuby interpreter to your macOS or iOS app.
 
 ![Build](https://github.com/xord/cruby/workflows/Build/badge.svg)
 
-# 使い方
+# How To Use
 
-CRuby を使いたい Xcode プロジェクトに以下の Podfile を用意します。
+Prepare the following podfile for the Xcode project you want to use CRuby in.
 
 ```
 platform :ios, '10.0'
 pod 'CRuby', git: 'https://github.com/xord/cruby'
 ```
 
-ターミナルで以下を実行し、
+Run the following in a terminal.
 
 ```sh
 $ CRUBY_PLATFORM=ios pod install --verbose
 ```
-（コンパイル時間が長いため、--verbose オプションの使用を推奨します。）
+(Due to the long compile time, it is recommended to use the --verbose option)
 
-CRuby を使いたい所で以下のように文字列を評価することができます。
+Where you want to use CRuby, you can evaluate the string as follows.
 
 ```objc
 CRBValue *result = [CRuby eval:@"[1, 2, 3].map {|n| n ** 2}"];
