@@ -46,15 +46,15 @@ ARCHS    =
   ENV['archs'].tap {|archs| break archs.split(/[ ,]+/) if archs} ||
   ENV['arch'] .tap {|arch|  break [arch]               if arch}
 
-NAME        = "CRuby"
-LIB_NAME    = "#{NAME}_#{PLATFORM}"
+NAME     = "CRuby"
+LIB_NAME = "#{NAME}_#{PLATFORM}"
 
-ROOT_DIR     = __dir__
-INC_DIR      = "#{ROOT_DIR}/include"
-RUBY_DIR     = "#{ROOT_DIR}/.ruby"
-OSSL_DIR     = "#{ROOT_DIR}/.openssl"
-BUILD_DIR    = "#{ROOT_DIR}/.build"
-OUTPUT_DIR   = "#{ROOT_DIR}/CRuby"
+ROOT_DIR   = __dir__
+INC_DIR    = "#{ROOT_DIR}/include"
+RUBY_DIR   = "#{ROOT_DIR}/.ruby"
+OSSL_DIR   = "#{ROOT_DIR}/.openssl"
+BUILD_DIR  = "#{ROOT_DIR}/.build"
+OUTPUT_DIR = "#{ROOT_DIR}/CRuby"
 
 RUBY_CONFIGURE = "#{RUBY_DIR}/configure"
 OSSL_CONFIGURE = "#{OSSL_DIR}/Configure"
