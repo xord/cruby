@@ -59,6 +59,9 @@ OUTPUT_DIR   = "#{ROOT_DIR}/CRuby"
 RUBY_CONFIGURE = "#{RUBY_DIR}/configure"
 OSSL_CONFIGURE = "#{OSSL_DIR}/Configure"
 
+HEADERS_PATCH         = "#{ROOT_DIR}/headers.patch"
+HEADERS_PATCH_DEV_DIR = "#{ROOT_DIR}/.headers"
+
 NATIVE_RUBY_DIR         = "#{BUILD_DIR}/native/ruby"
 NATIVE_OSSL_DIR         = "#{BUILD_DIR}/native/openssl"
 NATIVE_RUBY_INSTALL_DIR = "#{BUILD_DIR}/native/ruby-install"
@@ -107,7 +110,9 @@ task :clean do
 end
 
 desc "delete all generated files"
-task :clobber => :clean
+task :clobber => :clean do
+  sh %( rm -rf #{HEADERS_PATCH_DEV_DIR} )
+end
 
 desc "build"
 task :build => [OUTPUT_LIB_DIR, OUTPUT_INC_DIR, OUTPUT_LIB_FILE]
@@ -167,6 +172,7 @@ end
 file OUTPUT_INC_DIR => [RUBY_CONFIGURE, OUTPUT_DIR] do
   sh %( cp -rf #{RUBY_DIR}/include #{OUTPUT_DIR} )
   sh %( cp -rf #{INC_DIR} #{OUTPUT_DIR})
+  sh %( patch -p1 -d #{OUTPUT_DIR}/include < #{HEADERS_PATCH} )
 end
 
 file OUTPUT_LIB_FILE do |t|
@@ -206,6 +212,21 @@ end
 
 file PREBUILT_ARCHIVE do
   download PREBUILT_URL, PREBUILT_ARCHIVE rescue OpenURI::HTTPError
+end
+
+
+task :headers_patch_dir => RUBY_CONFIGURE do
+  sh %( cp -r "#{RUBY_DIR}/include" #{HEADERS_PATCH_DEV_DIR} )
+  chdir HEADERS_PATCH_DEV_DIR do
+    sh %( git init && git add . && git commit -m '-' )
+    sh %( patch -p1 -d . < #{HEADERS_PATCH} )
+  end
+end
+
+task :update_headers_patch do
+  chdir HEADERS_PATCH_DEV_DIR do
+    sh %( git diff > #{HEADERS_PATCH} )
+  end
 end
 
 
