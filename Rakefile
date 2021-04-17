@@ -215,17 +215,19 @@ file PREBUILT_ARCHIVE do
 end
 
 
-task :headers_patch_dir => RUBY_CONFIGURE do
-  sh %( cp -r "#{RUBY_DIR}/include" #{HEADERS_PATCH_DEV_DIR} )
-  chdir HEADERS_PATCH_DEV_DIR do
-    sh %( git init && git add . && git commit -m '-' )
-    sh %( patch -p1 -d . < #{HEADERS_PATCH} )
+namespace :headers_patch do
+  task :setup => RUBY_CONFIGURE do
+    sh %( cp -r "#{RUBY_DIR}/include" #{HEADERS_PATCH_DEV_DIR} )
+    chdir HEADERS_PATCH_DEV_DIR do
+      sh %( git init && git add . && git commit -m '-' )
+      sh %( patch -p1 -d . < #{HEADERS_PATCH} )
+    end
   end
-end
 
-task :update_headers_patch do
-  chdir HEADERS_PATCH_DEV_DIR do
-    sh %( git diff > #{HEADERS_PATCH} )
+  task :update do
+    chdir HEADERS_PATCH_DEV_DIR do
+      sh %( git diff > #{HEADERS_PATCH} )
+    end
   end
 end
 
