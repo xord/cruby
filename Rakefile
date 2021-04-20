@@ -41,10 +41,11 @@ def ruby25_or_higher? ()
 end
 
 
-PLATFORM = (ENV['platform'] || :osx).intern
-ARCHS    =
+PLATFORM            = (ENV['platform'] || :osx).intern
+ARCHS               =
   ENV['archs'].tap {|archs| break archs.split(/[ ,]+/) if archs} ||
   ENV['arch'] .tap {|arch|  break [arch]               if arch}
+NO_PREBUILT_ARCHIVE = (ENV['noprebuilt'] || 0).to_i != 0
 
 NAME     = "CRuby"
 LIB_NAME = "#{NAME}_#{PLATFORM}"
@@ -211,6 +212,7 @@ task :download_or_build_all => PREBUILT_ARCHIVE do
 end
 
 file PREBUILT_ARCHIVE do
+  next if NO_PREBUILT_ARCHIVE
   download PREBUILT_URL, PREBUILT_ARCHIVE rescue OpenURI::HTTPError
 end
 
