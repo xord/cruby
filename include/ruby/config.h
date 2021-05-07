@@ -7,32 +7,20 @@
 
 
 #if TARGET_OS_IPHONE
-	#ifdef __i386__
-	#include "ruby/config-ios_i386.h"
-	#endif
-
 	#ifdef __x86_64__
 	#include "ruby/config-ios_x86_64.h"
-	#endif
-
-	#ifdef __ARM_ARCH_7A__
-	#include "ruby/config-ios_armv7.h"
-	#endif
-
-	#ifdef __ARM_ARCH_7S__
-	#include "ruby/config-ios_armv7s.h"
 	#endif
 
 	#ifdef __arm64__
 	#include "ruby/config-ios_arm64.h"
 	#endif
 #else
-	#ifdef __i386__
-	#include "ruby/config-osx_i386.h"
+	#ifdef __x86_64__
+	#include "ruby/config-macos_x86_64.h"
 	#endif
 
-	#ifdef __x86_64__
-	#include "ruby/config-osx_x86_64.h"
+	#ifdef __arm64__
+	#include "ruby/config-macos_arm64.h"
 	#endif
 #endif
 
