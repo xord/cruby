@@ -190,7 +190,7 @@ task :download_or_build_all => PREBUILT_ARCHIVE do
 end
 
 file PREBUILT_ARCHIVE do
-  next if NO_PREBUILT_ARCHIVE
+  next if NO_PREBUILT
   download PREBUILT_URL, PREBUILT_ARCHIVE rescue OpenURI::HTTPError
 end
 
