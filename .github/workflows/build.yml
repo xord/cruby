@@ -23,8 +23,5 @@ jobs:
         with:
           ruby-version: 2.7.x
 
-      - name: ios
-        run: rake ios
-
-      - name: osx
-        run: rake osx
+      - name: build
+        run: rake build
