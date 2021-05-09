@@ -1,7 +1,6 @@
 # -*- mode: ruby -*-
 
 
-require 'digest'
 require 'open-uri'
 require_relative 'config'
 
@@ -32,10 +31,6 @@ def modify_file (path, &block)
   body     = read_file path
   modified = block.call body.dup
   write_file path, modified if modified != body
-end
-
-def digest (path)
-  Digest::SHA256.hexdigest read_file path
 end
 
 def download (url, path)
