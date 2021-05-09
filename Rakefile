@@ -122,16 +122,6 @@ end
 desc "build"
 task :build => XCFRAMEWORK_INFO_PLIST
 
-desc "build files for macOS"
-task :macos do
-  sh %( rake build platform=macos )
-end
-
-desc "build files for iOS"
-task :ios do
-  sh %( rake build platform=ios )
-end
-
 directory BUILD_DIR
 directory OUTPUT_DIR
 
