@@ -6,21 +6,31 @@
 #import <TargetConditionals.h>
 
 
-#if TARGET_OS_IPHONE
-	#ifdef __x86_64__
-	#include "ruby/config-ios_x86_64.h"
-	#endif
+#if TARGET_OS_IOS
+	#if TARGET_OS_SIMULATOR
+		#ifdef __x86_64__
+		#include "ruby/config-iphonesimulator-x86_64.h"
+		#endif
 
-	#ifdef __arm64__
-	#include "ruby/config-ios_arm64.h"
+		#ifdef __arm64__
+		#include "ruby/config-iphonesimulator-arm64.h"
+		#endif
+	#else
+		#ifdef __x86_64__
+		#include "ruby/config-iphoneos-x86_64.h"
+		#endif
+
+		#ifdef __arm64__
+		#include "ruby/config-iphoneos-arm64.h"
+		#endif
 	#endif
 #else
 	#ifdef __x86_64__
-	#include "ruby/config-macos_x86_64.h"
+	#include "ruby/config-macosx-x86_64.h"
 	#endif
 
 	#ifdef __arm64__
-	#include "ruby/config-macos_arm64.h"
+	#include "ruby/config-macosx-arm64.h"
 	#endif
 #endif
 

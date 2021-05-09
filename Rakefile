@@ -227,7 +227,7 @@ TARGETS.each do |platform, sdk, arch|
   arm = arch =~ /^arm/
 
   namespace :ruby do
-    config_h     = "#{framework_inc_dir}/ruby/config-#{platform}_#{arch}.h"
+    config_h     = "#{framework_inc_dir}/ruby/config-#{sdk}-#{arch}.h"
     config_h_dir = File.dirname config_h
     makefile     = "#{ruby_dir}/Makefile"
     host         = "#{arm ? 'arm' : arch}-#{ios ? 'iphone' : 'apple'}-darwin"
