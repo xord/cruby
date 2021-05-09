@@ -61,13 +61,15 @@ end
 
 
 TARGETS = [
-  #  PLATFORM  SDK              ARCH    OpenSSL_Configuration
-  %w[macos     macosx           x86_64  default],
-  #%w[macos     macosx           arm64   darwin64-arm64-cc],
-  %w[ios       iphonesimulator  x86_64  iphoneos-cross],
-  #%w[ios       iphonesimulator  arm64   ios64-cross],
-  %w[ios       iphoneos         arm64   ios64-cross]
-]
+  %w[macos macosx          x86_64],
+  #%w[macos macosx          arm64],
+  %w[ios   iphonesimulator x86_64],
+  #%w[ios   iphonesimulator arm64],
+  %w[ios   iphoneos        arm64]
+].reject {|platform, sdk, arch|
+  (BUILD_PLATFORM && platform != BUILD_PLATFORM) ||
+  (BUILD_TARGETS  && !BUILD_TARGETS.include?("#{sdk}:#{arch}"))
+}
 
 NAME        = "CRuby"
 OUTPUT_NAME = "#{NAME}.xcframework"
@@ -79,8 +81,9 @@ OSSL_DIR   = "#{ROOT_DIR}/.openssl"
 BUILD_DIR  = "#{ROOT_DIR}/.build"
 OUTPUT_DIR = "#{ROOT_DIR}/#{OUTPUT_NAME}"
 
-RUBY_CONFIGURE = "#{RUBY_DIR}/configure"
-OSSL_CONFIGURE = "#{OSSL_DIR}/Configure"
+RUBY_CONFIGURE   = "#{RUBY_DIR}/configure"
+OSSL_CONFIGURE   = "#{OSSL_DIR}/Configure"
+OSSL_CUSTOM_CONF = "#{OSSL_DIR}/Configurations/999-custom.conf"
 
 HEADERS_PATCH         = "#{ROOT_DIR}/headers.patch"
 HEADERS_PATCH_DEV_DIR = "#{ROOT_DIR}/.headers"
@@ -154,6 +157,36 @@ directory OUTPUT_DIR
   end
 end
 
+file OSSL_CUSTOM_CONF do
+  sdk_path = -> sdk {xcrun sdk, '--show-sdk-path'}
+
+  write_file OSSL_CUSTOM_CONF, <<~END
+    my %targets = (
+      "macosx-x86_64" => {
+        inherit_from => ["darwin64-x86_64-cc"],
+        cflags       => add("-isysroot #{sdk_path[:macosx]}"),
+      },
+      "macosx-arm64" => {
+        inherit_from => ["darwin64-arm64-cc"],
+        cflags       => add("-isysroot #{sdk_path[:macosx]}"),
+      },
+      "iphonesimulator-x86_64" => {
+        inherit_from => ["ios-common"],
+        cflags       => add("-isysroot #{sdk_path[:iphonesimulator]} -arch x86_64 -fno-common"),
+      },
+      "iphonesimulator-arm64" => {
+        inherit_from => ["ios-common"],
+        cflags       => add("-isysroot #{sdk_path[:iphonesimulator]} -arch arm64 -fno-common"),
+      },
+      "iphoneos-arm64" => {
+        inherit_from => ["ios64-xcrun"],
+        CC           => "cc",
+        cflags       => add("-isysroot #{sdk_path[:iphoneos]}"),
+      },
+    );
+  END
+end
+
 file XCFRAMEWORK_INFO_PLIST do |t|
   frameworks = t.prerequisites
     .select {|name| name =~ /\.framework$/}
@@ -185,10 +218,7 @@ file PREBUILT_ARCHIVE do
 end
 
 
-TARGETS.each do |platform, sdk, arch, ossl_conf|
-  next if BUILD_PLATFORM && platform != BUILD_PLATFORM
-  next if BUILD_TARGETS  && !BUILD_TARGETS.include?("#{sdk}:#{arch}")
-
+TARGETS.each do |platform, sdk, arch|
   sdk_root = xcrun sdk, '--show-sdk-path'
   cc_dir   = File.dirname xcrun(sdk, '--find cc')
 
@@ -312,31 +342,18 @@ TARGETS.each do |platform, sdk, arch, ossl_conf|
   end# ruby
 
   namespace :openssl do
-    configure   = OSSL_CONFIGURE
-    conf_target = ossl_conf
-    envs        = {
-      CROSS_COMPILE: "#{cc_dir}/",
-      CROSS_TOP:     "#{xcrun sdk, '--show-sdk-platform-path'}/Developer",
-      CROSS_SDK:     File.basename(sdk_root)
-    }.map {|k, v| "#{k}=#{v}"}
-
-    if conf_target == 'default'
-      configure   = configure.sub(/Configure$/, 'config')
-      conf_target = ''
-      envs.clear
-    end
-
     directory ossl_dir
     directory ossl_install_dir
 
-    file libossl => [OSSL_CONFIGURE, ossl_dir] do
+    file libossl => [OSSL_CONFIGURE, OSSL_CUSTOM_CONF, ossl_dir] do
       chdir ossl_dir do
+        envs = "CROSS_COMPILE=#{cc_dir}/"
         opts = %W[
           --prefix=#{ossl_install_dir}
           no-shared
         ]
-        sh %( #{envs.join ' '} #{configure} #{opts.join ' '} #{conf_target} )
-        sh %( #{envs.join ' '} make )
+        sh %( #{envs} #{OSSL_CONFIGURE} #{opts.join ' '} #{sdk}-#{arch} )
+        sh %( #{envs} make )
       end
     end
 
