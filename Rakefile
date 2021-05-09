@@ -226,7 +226,8 @@ TARGETS.each do |platform, sdk, arch, ossl_conf|
     config_h_dir = File.dirname config_h
     makefile     = "#{ruby_dir}/Makefile"
     host         = "#{arm ? 'arm' : arch}-#{ios ? 'iphone' : 'apple'}-darwin"
-    flags        = "-pipe -Os -isysroot #{sdk_root}" # -gdwarf-2 -no-cpp-precomp -mthumb
+    isysroot     = "-isysroot #{sdk_root}"
+    flags        = "-pipe -Os #{isysroot}" # -gdwarf-2 -no-cpp-precomp -mthumb
 
     if ios
       flags << " -miphoneos-version-min=10.0"
@@ -272,6 +273,7 @@ TARGETS.each do |platform, sdk, arch, ossl_conf|
           'CPPFLAGS' => "#{flags}",
           'CFLAGS'   => "#{flags} -fvisibility=hidden",
           'CXXFLAGS' => "-fvisibility-inline-hidden",
+          'ASFLAGS'  => "#{isysroot}",
           'LDFLAGS'  => "#{flags} -L#{sdk_root}/usr/lib -lSystem"
         }.map {|k, v| "#{k}='#{v}'"}
         opts = %W[
