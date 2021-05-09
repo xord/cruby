@@ -155,21 +155,11 @@ directory OUTPUT_DIR
 end
 
 file XCFRAMEWORK_INFO_PLIST do |t|
-  frameworks = t.prerequisites.select {|name| name =~ /\.framework$/}
-  opts       = frameworks.map {|framework| "-framework #{framework}"}
+  frameworks = t.prerequisites
+    .select {|name| name =~ /\.framework$/}
+    .map {|framework| "-framework #{framework}"}
   sh %( rm -rf #{OUTPUT_DIR} )
-  sh %( xcodebuild -create-xcframework -output #{OUTPUT_DIR} #{opts.join ' '} )
-
-  # 'xcodebuild -create-xcframework' fails if the CRuby(libruby-static.a) includes 'Context.o'.
-  # Context.o has incorrect 'platform' number. ($ otool -l CRuby.framework/CRuby | grep platform)
-  # so append Context.o to .a after creating .xcframework.
-  lib_files = Dir.glob("#{OUTPUT_DIR}/*/#{FRAMEWORK_NAME}/#{NAME}")
-    .each_with_object({}) {|path, hash| hash[digest path] = path}
-  frameworks.each do |framework|
-    lib_file  = lib_files[digest "#{framework}/#{NAME}"]
-    context_o = Dir.glob("#{framework}/../.#{NAME}/ruby/**/Context.o").first
-    sh %( ar -crs #{lib_file} #{context_o} )
-  end
+  sh %( xcodebuild -create-xcframework -output #{OUTPUT_DIR} #{frameworks.join ' '} )
 end
 
 
@@ -380,7 +370,7 @@ TARGETS.each do |platform, sdk, arch, ossl_conf|
 
     file framework_lib_file => [libruby, libossl] do
       extract_dir = "#{build_dir}/.#{File.basename framework_lib_file}"
-      excludes    = %w[Context.o dmyenc.o dmyext.o /openssl/apps/ /openssl/test/]
+      excludes    = %w[dmyenc.o dmyext.o /openssl/apps/ /openssl/test/]
       extra_objs  = %w[enc ext].map {|s| "#{ruby_dir}/#{s}/#{s}init.o"}
 
       [ruby_dir, ossl_dir]
