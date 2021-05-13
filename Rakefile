@@ -5,18 +5,18 @@ require 'open-uri'
 require_relative 'config'
 
 
-# $ rake build platform=X
+# $ rake build os=X
 #   X: macos => build only for macosx.
 #   X: ios   => build only for iphoneos and iphonesimulator.
-BUILD_PLATFORM = ENV['platform']
+BUILD_OS      = ENV['os']
 
 # $ rake build targets="macosx:x86_64, iphoneos:arm64"
 #   => build only for macosx:x86_64 and iphoneos:arm64.
-BUILD_TARGETS  = ENV['targets']&.split(/[ ,]+/)
+BUILD_TARGETS = ENV['targets']&.split(/[ ,]+/)
 
 # $ rake download_or_build_all noprebuilt=1
 #   => do not download prebuild archive.
-NO_PREBUILT    = (ENV['noprebuilt'] || 0).to_i != 0
+NO_PREBUILT   = (ENV['noprebuilt'] || 0).to_i != 0
 
 
 def read_file (path)
@@ -55,19 +55,14 @@ def ruby25_or_higher? ()
 end
 
 
-TARGETS = [
-  %w[macos macosx          x86_64],
-  #%w[macos macosx          arm64],
-  %w[ios   iphonesimulator x86_64],
-  #%w[ios   iphonesimulator arm64],
-  %w[ios   iphoneos        arm64]
-].reject {|platform, sdk, arch|
-  (BUILD_PLATFORM && platform != BUILD_PLATFORM) ||
-  (BUILD_TARGETS  && !BUILD_TARGETS.include?("#{sdk}:#{arch}"))
-}
-
 NAME        = "CRuby"
 OUTPUT_NAME = "#{NAME}.xcframework"
+
+TARGETS = [
+  [:macos, :macosx,          [:arm64, :x86_64]],
+  [:ios,   :iphonesimulator, [:arm64, :x86_64]],
+  [:ios,   :iphoneos,        [:arm64]]
+]
 
 ROOT_DIR   = __dir__
 INC_DIR    = "#{ROOT_DIR}/include"
@@ -100,6 +95,12 @@ PREBUILT_ARCHIVE = "downloaded_#{OUTPUT_ARCHIVE}"
 
 PATHS = ENV['PATH']
 ENV['ac_cv_func_setpgrp_void'] = 'yes'
+
+FILTERED_TARGETS = TARGETS.each {|os, sdk, archs|
+  archs.reject! {|arch|
+    BUILD_TARGETS && !BUILD_TARGETS.include?("#{sdk}:#{arch}")
+  }
+}.reject {|os, sdk, archs| BUILD_OS && os.to_s != BUILD_OS || archs.empty?}
 
 
 task :default => :build
@@ -203,151 +204,185 @@ file PREBUILT_ARCHIVE do
 end
 
 
-TARGETS.each do |platform, sdk, arch|
+FILTERED_TARGETS.each do |os, sdk, archs|
   sdk_root = xcrun sdk, '--show-sdk-path'
   cc_dir   = File.dirname xcrun(sdk, '--find cc')
 
-  build_dir = "#{BUILD_DIR}/#{sdk}_#{arch}"
-  ruby_dir  = "#{build_dir}/ruby"
-  ossl_dir  = "#{build_dir}/openssl"
-
-  ossl_install_dir = "#{build_dir}/openssl-install"
-  ossl_config_h    = "#{ossl_install_dir}/include/openssl/opensslconf.h"
-
-  libruby_ver = ruby25_or_higher? ? ".#{CRuby.ruby_version[0, 2].join '.'}" : ""
-  libruby     = "#{ruby_dir}/libruby#{libruby_ver}-static.a"
-  libossl     = "#{ossl_dir}/libssl.a"
+  build_dir = "#{BUILD_DIR}/#{sdk}"
 
   framework_dir      = "#{build_dir}/#{FRAMEWORK_NAME}"
   framework_inc_dir  = "#{framework_dir}/Headers"
   framework_res_dir  = "#{framework_dir}/Resources"
   framework_lib_file = "#{framework_dir}/#{NAME}"
 
-  ios = platform == 'ios'
-  arm = arch =~ /^arm/
+  archs.each do |arch|
+    build_arch_dir = "#{build_dir}/#{arch}"
+    ruby_dir       = "#{build_arch_dir}/ruby"
+    ossl_dir       = "#{build_arch_dir}/openssl"
 
-  namespace :ruby do
-    config_h     = "#{framework_inc_dir}/ruby/config-#{sdk}-#{arch}.h"
-    config_h_dir = File.dirname config_h
-    makefile     = "#{ruby_dir}/Makefile"
-    host         = "#{arm ? 'arm' : arch}-#{ios ? 'iphone' : 'apple'}-darwin"
-    isysroot     = "-isysroot #{sdk_root}"
-    flags        = "-pipe -Os #{isysroot}" # -gdwarf-2 -no-cpp-precomp -mthumb
+    ossl_install_dir = "#{build_arch_dir}/openssl-install"
+    ossl_config_h    = "#{ossl_install_dir}/include/openssl/opensslconf.h"
 
-    if ios
-      flags << " -miphoneos-version-min=10.0"
+    libruby_ver = ruby25_or_higher? ? ".#{CRuby.ruby_version[0, 2].join '.'}" : ""
+    libruby     = "#{ruby_dir}/libruby#{libruby_ver}-static.a"
+    libossl     = "#{ossl_dir}/libssl.a"
+    lib_file    = "#{build_arch_dir}/#{NAME}"
 
-      # to skip checking macos version
-      flags << " -DMAC_OS_X_VERSION_MIN_REQUIRED=MAC_OS_X_VERSION_10_5"
-    end
+    ios = os == :ios
+    arm = arch =~ /^arm/
 
-    directory ruby_dir
-    directory config_h_dir
+    namespace :ruby do
+      config_h     = "#{framework_inc_dir}/ruby/config-#{sdk}-#{arch}.h"
+      config_h_dir = File.dirname config_h
+      makefile     = "#{ruby_dir}/Makefile"
+      host         = "#{arm ? 'arm' : arch}-#{ios ? 'iphone' : 'apple'}-darwin"
+      isysroot     = "-isysroot #{sdk_root}"
+      flags        = "-pipe -Os #{isysroot}" # -gdwarf-2 -no-cpp-precomp -mthumb
 
-    missing_headers = []
-    if ios
-      ruby_inc_dir = "#{ruby_dir}/include"
-      vnode_h      = "#{ruby_inc_dir}/sys/vnode.h"
-      vnode_h_dir = File.dirname vnode_h
+      if "#{sdk}:#{arch}" == 'iphonesimulator:x86_64'
+        flags << " -miphoneos-version-min=10.0"
 
-      directory vnode_h_dir
-
-      file vnode_h => vnode_h_dir do
-        write_file vnode_h, <<-END
-          #ifndef DUMMY_VNODE_H_INCLUDED
-          #define DUMMY_VNODE_H_INCLUDED
-          enum {VREG = 1, VDIR = 2, VLNK = 5, VT_HFS = 16, VT_CIFS = 23};
-          #endif
-        END
+        # to skip checking macos version
+        flags << " -DMAC_OS_X_VERSION_MIN_REQUIRED=MAC_OS_X_VERSION_10_5"
       end
 
-      missing_headers += [vnode_h]
-      flags           += " -I#{ruby_inc_dir}"
-    end
+      directory ruby_dir
+      directory config_h_dir
 
-    makefile_dep = [RUBY_CONFIGURE, ruby_dir, ossl_config_h, *missing_headers]
-    makefile_dep << BASE_RUBY if BASE_RUBY
-    file makefile => makefile_dep do
-      chdir ruby_dir do
-        envs = {
-          'PATH'     => "#{cc_dir}:#{PATHS}",
-          'CPP'      => "clang -arch #{arch} -E",
-          'CC'       => "clang -arch #{arch}",
-          'CXXCPP'   => "clang++ -arch #{arch} -E",
-          'CXX'      => "clang++ -arch #{arch}",
-          'CPPFLAGS' => "#{flags}",
-          'CFLAGS'   => "#{flags} -fvisibility=hidden",
-          'CXXFLAGS' => "-fvisibility-inline-hidden",
-          'ASFLAGS'  => "#{isysroot}",
-          'LDFLAGS'  => "#{flags} -L#{sdk_root}/usr/lib -lSystem"
-        }.map {|k, v| "#{k}='#{v}'"}
-        opts = %W[
-          --host=#{host}
-          --disable-shared
-          --disable-dln
-          --disable-jit-support
-          --disable-install-doc
-          --with-static-linked-ext
-          --with-openssl-dir=#{ossl_install_dir}
-          --without-tcl
-          --without-tk
-          --without-fiddle
-          --without-bigdecimal
-        ]
-        opts << "--with-arch=#{arch}" unless arm
-        opts << "--with-baseruby=#{BASE_RUBY}" if BASE_RUBY
-        sh %( #{envs.join ' '} #{RUBY_CONFIGURE} #{opts.join ' '} )
-      end
-    end
+      missing_headers = []
+      if ios
+        ruby_inc_dir = "#{ruby_dir}/include"
+        vnode_h      = "#{ruby_inc_dir}/sys/vnode.h"
+        vnode_h_dir = File.dirname vnode_h
 
-    file config_h => [makefile, config_h_dir] do
-      src = Dir.glob("#{ruby_dir}/.ext/include/**/ruby/config.h").first
-      raise unless src
+        directory vnode_h_dir
 
-      # avoid crash on AdMob initialization.
-      modify_file src do |s|
-        %w[
-          HAVE_BACKTRACE
-          HAVE_SYSCALL
-          HAVE___SYSCALL
-        ].each do |macro|
-          s = s.gsub /#define\s+#{macro}\s+1/, "#undef #{macro}"
+        file vnode_h => vnode_h_dir do
+          write_file vnode_h, <<-END
+            #ifndef DUMMY_VNODE_H_INCLUDED
+            #define DUMMY_VNODE_H_INCLUDED
+            enum {VREG = 1, VDIR = 2, VLNK = 5, VT_HFS = 16, VT_CIFS = 23};
+            #endif
+          END
         end
-        s
+
+        missing_headers += [vnode_h]
+        flags           += " -I#{ruby_inc_dir}"
       end
 
-      sh %( cp #{src} #{config_h} )
-    end
+      makefile_dep = [RUBY_CONFIGURE, ruby_dir, ossl_config_h, *missing_headers]
+      makefile_dep << BASE_RUBY if BASE_RUBY
+      file makefile => makefile_dep do
+        chdir ruby_dir do
+          envs = {
+            'PATH'     => "#{cc_dir}:#{PATHS}",
+            'CPP'      => "clang -arch #{arch} -E",
+            'CC'       => "clang -arch #{arch}",
+            'CXXCPP'   => "clang++ -arch #{arch} -E",
+            'CXX'      => "clang++ -arch #{arch}",
+            'CPPFLAGS' => "#{flags}",
+            'CFLAGS'   => "#{flags} -fvisibility=hidden",
+            'CXXFLAGS' => "-fvisibility-inline-hidden",
+            'ASFLAGS'  => "#{isysroot}",
+            'LDFLAGS'  => "#{flags} -L#{sdk_root}/usr/lib -lSystem"
+          }.map {|k, v| "#{k}='#{v}'"}
+          opts = %W[
+            --host=#{host}
+            --disable-shared
+            --disable-dln
+            --disable-jit-support
+            --disable-install-doc
+            --with-static-linked-ext
+            --with-openssl-dir=#{ossl_install_dir}
+            --without-tcl
+            --without-tk
+            --without-fiddle
+            --without-bigdecimal
+          ]
+          opts << "--with-arch=#{arch}" unless arm
+          opts << "--with-baseruby=#{BASE_RUBY}" if BASE_RUBY
+          sh %( #{envs.join ' '} #{RUBY_CONFIGURE} #{opts.join ' '} )
+        end
+      end
 
-    file libruby => [makefile, config_h] do
-      chdir ruby_dir do
-        sh %( make )
+      file config_h => [makefile, config_h_dir] do
+        src = Dir.glob("#{ruby_dir}/.ext/include/**/ruby/config.h").first
+        raise unless src
+
+        # avoid crash on AdMob initialization.
+        modify_file src do |s|
+          %w[
+            HAVE_BACKTRACE
+            HAVE_SYSCALL
+            HAVE___SYSCALL
+          ].each do |macro|
+            s = s.gsub /#define\s+#{macro}\s+1/, "#undef #{macro}"
+          end
+          s
+        end
+
+        sh %( cp #{src} #{config_h} )
+      end
+
+      file libruby => [makefile, config_h] do
+        chdir ruby_dir do
+          sh %( make )
+        end
+      end
+    end# ruby
+
+    namespace :openssl do
+      directory ossl_dir
+      directory ossl_install_dir
+
+      file libossl => [OSSL_CONFIGURE, OSSL_CUSTOM_CONF, ossl_dir] do
+        chdir ossl_dir do
+          envs = "CROSS_COMPILE=#{cc_dir}/"
+          opts = %W[
+            --prefix=#{ossl_install_dir}
+            no-shared
+          ]
+          sh %( #{envs} #{OSSL_CONFIGURE} #{opts.join ' '} #{sdk}-#{arch} )
+          sh %( #{envs} make )
+        end
+      end
+
+      file ossl_config_h => [libossl, ossl_install_dir] do
+        chdir ossl_dir do
+          sh %( make install_sw | grep include )
+        end
+      end
+    end# openssl
+
+    file lib_file => [libruby, libossl] do
+      extract_dir = "#{build_arch_dir}/.#{File.basename lib_file}"
+      excludes    = %w[dmyenc.o dmyext.o /openssl/apps/ /openssl/test/]
+      extra_objs  = %w[enc ext].map {|s| "#{ruby_dir}/#{s}/#{s}init.o"}
+
+      [ruby_dir, ossl_dir]
+        .map {|dir| Dir.glob "#{dir}/**/*.a"}
+        .flatten
+        .reject {|path| excludes.any? {|s| path.include? s}}
+        .each do |path|
+
+        a_dir    = path[%r|#{build_arch_dir}/(.+)\.a$|, 1]
+        objs_dir = "#{extract_dir}/#{a_dir}"
+
+        sh %( mkdir -p #{objs_dir} && cp #{path} #{objs_dir} )
+        chdir objs_dir do
+          sh %( ar x #{File.basename path} )
+        end
+      end
+
+      chdir build_arch_dir do
+        objs = Dir.glob("#{extract_dir}/**/*.o")
+          .reject {|path| excludes.any? {|s| path.include? s}}
+        sh %( ar -crs #{lib_file} #{objs.join ' '} #{extra_objs.join ' '} )
       end
     end
-  end# ruby
 
-  namespace :openssl do
-    directory ossl_dir
-    directory ossl_install_dir
-
-    file libossl => [OSSL_CONFIGURE, OSSL_CUSTOM_CONF, ossl_dir] do
-      chdir ossl_dir do
-        envs = "CROSS_COMPILE=#{cc_dir}/"
-        opts = %W[
-          --prefix=#{ossl_install_dir}
-          no-shared
-        ]
-        sh %( #{envs} #{OSSL_CONFIGURE} #{opts.join ' '} #{sdk}-#{arch} )
-        sh %( #{envs} make )
-      end
-    end
-
-    file ossl_config_h => [libossl, ossl_install_dir] do
-      chdir ossl_dir do
-        sh %( make install_sw | grep include )
-      end
-    end
-  end# openssl
+    file framework_lib_file => lib_file
+  end
 
   namespace :framework do
     inc_ruby_h  = "#{framework_inc_dir}/ruby.h"
@@ -370,31 +405,8 @@ TARGETS.each do |platform, sdk, arch|
       end
     end
 
-    file framework_lib_file => [libruby, libossl] do
-      extract_dir = "#{build_dir}/.#{File.basename framework_lib_file}"
-      excludes    = %w[dmyenc.o dmyext.o /openssl/apps/ /openssl/test/]
-      extra_objs  = %w[enc ext].map {|s| "#{ruby_dir}/#{s}/#{s}init.o"}
-
-      [ruby_dir, ossl_dir]
-        .map {|dir| Dir.glob "#{dir}/**/*.a"}
-        .flatten
-        .reject {|path| excludes.any? {|s| path.include? s}}
-        .each do |path|
-
-        a_dir    = path[%r|#{build_dir}/(.+)\.a$|, 1]
-        objs_dir = "#{extract_dir}/#{a_dir}"
-
-        sh %( mkdir -p #{objs_dir} && cp #{path} #{objs_dir} )
-        chdir objs_dir do
-          sh %( ar x #{File.basename path} )
-        end
-      end
-
-      chdir build_dir do
-        objs = Dir.glob("#{extract_dir}/**/*.o")
-          .reject {|path| excludes.any? {|s| path.include? s}}
-        sh %( ar -crs #{framework_lib_file} #{objs.join ' '} #{extra_objs.join ' '} )
-      end
+    file framework_lib_file do |t|
+      sh %( lipo -create #{t.prerequisites.join ' '} -output #{framework_lib_file} )
     end
 
     file XCFRAMEWORK_INFO_PLIST => [framework_dir, framework_lib_file, inc_ruby_h, res_json_rb]
