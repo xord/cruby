@@ -12,7 +12,7 @@ BUILD_OS      = ENV['os']
 
 # $ rake build targets="macosx:x86_64, iphoneos:arm64"
 #   => build only for macosx:x86_64 and iphoneos:arm64.
-BUILD_TARGETS = ENV['targets']&.split(/[ ,]+/)
+BUILD_TARGETS = (ENV['targets'] || ENV['target'])&.split(/[ ,]+/)
 
 # $ rake download_or_build_all noprebuilt=1
 #   => do not download prebuild archive.
@@ -55,8 +55,7 @@ def ruby25_or_higher? ()
 end
 
 
-NAME        = "CRuby"
-OUTPUT_NAME = "#{NAME}.xcframework"
+NAME = "CRuby"
 
 TARGETS = [
   [:macos, :macosx,          [:arm64, :x86_64]],
@@ -69,7 +68,7 @@ INC_DIR    = "#{ROOT_DIR}/include"
 RUBY_DIR   = "#{ROOT_DIR}/.ruby"
 OSSL_DIR   = "#{ROOT_DIR}/.openssl"
 BUILD_DIR  = "#{ROOT_DIR}/.build"
-OUTPUT_DIR = "#{ROOT_DIR}/#{OUTPUT_NAME}"
+OUTPUT_DIR = "#{ROOT_DIR}/#{NAME}"
 
 RUBY_CONFIGURE   = "#{RUBY_DIR}/configure"
 OSSL_CONFIGURE   = "#{OSSL_DIR}/Configure"
@@ -86,8 +85,13 @@ SYSTEM_RUBY_VER = RUBY_VERSION[/^(\d+\.\d+)\.\d+/, 1]
  EMBED_RUBY_VER = CRuby.ruby_version[0..1].join('.')
 BASE_RUBY       = SYSTEM_RUBY_VER != EMBED_RUBY_VER ? NATIVE_RUBY_BIN : nil
 
-FRAMEWORK_NAME         = "#{NAME}.framework"
-XCFRAMEWORK_INFO_PLIST = "#{OUTPUT_DIR}/Info.plist"
+OUTPUT_XCFRAMEWORK_NAME       = "#{NAME}.xcframework"
+OUTPUT_XCFRAMEWORK_DIR        = "#{OUTPUT_DIR}/#{OUTPUT_XCFRAMEWORK_NAME}"
+OUTPUT_XCFRAMEWORK_INFO_PLIST = "#{OUTPUT_XCFRAMEWORK_DIR}/Info.plist"
+
+OUTPUT_RES_DIR  = "#{OUTPUT_DIR}/Resources"
+OUTPUT_RUBY_DIR = "#{OUTPUT_RES_DIR}/ruby"
+OUTPUT_JSON_RB  = "#{OUTPUT_RUBY_DIR}/json.rb"
 
 OUTPUT_ARCHIVE   = "#{NAME}_prebuilt-#{CRuby.version}.tar.gz"
 PREBUILT_URL     = "#{GITHUB_URL}/releases/download/v#{CRuby.version}/#{OUTPUT_ARCHIVE}"
@@ -116,10 +120,11 @@ task :clobber => :clean do
 end
 
 desc "build"
-task :build => XCFRAMEWORK_INFO_PLIST
+task :build => [OUTPUT_XCFRAMEWORK_INFO_PLIST, OUTPUT_JSON_RB]
 
 directory BUILD_DIR
 directory OUTPUT_DIR
+directory OUTPUT_RUBY_DIR
 
 [
   [RUBY_DIR, RUBY_URL, RUBY_CONFIGURE],
@@ -173,12 +178,19 @@ file OSSL_CUSTOM_CONF do
   END
 end
 
-file XCFRAMEWORK_INFO_PLIST do |t|
-  frameworks = t.prerequisites
-    .select {|name| name =~ /\.framework$/}
-    .map {|framework| "-framework #{framework}"}
-  sh %( rm -rf #{OUTPUT_DIR} )
-  sh %( xcodebuild -create-xcframework -output #{OUTPUT_DIR} #{frameworks.join ' '} )
+file OUTPUT_XCFRAMEWORK_INFO_PLIST do |t|
+  libs = t.prerequisites.select {|s| s.end_with? '.a'}.map {|s| "-library #{s}"}
+  incs = t.prerequisites.select {|s| s.end_with? '.h'}.map {|s| "-headers #{File.dirname s}"}
+  opts = libs.sort.zip(incs.sort).flatten
+  sh %( rm -rf #{OUTPUT_XCFRAMEWORK_DIR} )
+  sh %( xcodebuild -create-xcframework -output #{OUTPUT_XCFRAMEWORK_DIR} #{opts.join ' '} )
+end
+
+file OUTPUT_JSON_RB => [RUBY_CONFIGURE, OUTPUT_RUBY_DIR] do
+  sh %( cp -rf #{RUBY_DIR}/lib/* #{OUTPUT_RUBY_DIR} )
+  Dir.glob "#{RUBY_DIR}/ext/*/lib" do |lib|
+    sh %( cp -rf #{lib}/* #{OUTPUT_RUBY_DIR} ) unless Dir.glob("#{lib}/*").empty?
+  end
 end
 
 
@@ -190,7 +202,7 @@ file OUTPUT_ARCHIVE => :build do
 end
 
 desc "download prebuilt binary or build all"
-task :download_or_build_all => PREBUILT_ARCHIVE do
+task :download_or_build => PREBUILT_ARCHIVE do
   if File.exist?(PREBUILT_ARCHIVE)
     sh %( tar xzf #{PREBUILT_ARCHIVE} )
   else
@@ -208,12 +220,13 @@ FILTERED_TARGETS.each do |os, sdk, archs|
   sdk_root = xcrun sdk, '--show-sdk-path'
   cc_dir   = File.dirname xcrun(sdk, '--find cc')
 
-  build_dir = "#{BUILD_DIR}/#{sdk}"
+  libruby_ver  = ruby25_or_higher? ? ".#{CRuby.ruby_version[0, 2].join '.'}" : ""
+  libruby_name = "libruby#{libruby_ver}-static.a"
 
-  framework_dir      = "#{build_dir}/#{FRAMEWORK_NAME}"
-  framework_inc_dir  = "#{framework_dir}/Headers"
-  framework_res_dir  = "#{framework_dir}/Resources"
-  framework_lib_file = "#{framework_dir}/#{NAME}"
+  build_dir       = "#{BUILD_DIR}/#{sdk}"
+  output_dir      = "#{build_dir}/output"
+  output_inc_dir  = "#{output_dir}/include"
+  output_lib_file = "#{output_dir}/#{libruby_name}"
 
   archs.each do |arch|
     build_arch_dir = "#{build_dir}/#{arch}"
@@ -223,16 +236,15 @@ FILTERED_TARGETS.each do |os, sdk, archs|
     ossl_install_dir = "#{build_arch_dir}/openssl-install"
     ossl_config_h    = "#{ossl_install_dir}/include/openssl/opensslconf.h"
 
-    libruby_ver = ruby25_or_higher? ? ".#{CRuby.ruby_version[0, 2].join '.'}" : ""
-    libruby     = "#{ruby_dir}/libruby#{libruby_ver}-static.a"
-    libossl     = "#{ossl_dir}/libssl.a"
-    lib_file    = "#{build_arch_dir}/#{NAME}"
+    libruby       = "#{ruby_dir}/#{libruby_name}"
+    libossl       = "#{ossl_dir}/libssl.a"
+    arch_lib_file = "#{build_arch_dir}/#{libruby_name}"
 
     ios = os == :ios
     arm = arch =~ /^arm/
 
     namespace :ruby do
-      config_h     = "#{framework_inc_dir}/ruby/config-#{sdk}-#{arch}.h"
+      config_h     = "#{output_inc_dir}/ruby/config-#{sdk}-#{arch}.h"
       config_h_dir = File.dirname config_h
       makefile     = "#{ruby_dir}/Makefile"
       host         = "#{arm ? 'arm' : arch}-#{ios ? 'iphone' : 'apple'}-darwin"
@@ -354,8 +366,8 @@ FILTERED_TARGETS.each do |os, sdk, archs|
       end
     end# openssl
 
-    file lib_file => [libruby, libossl] do
-      extract_dir = "#{build_arch_dir}/.#{File.basename lib_file}"
+    file arch_lib_file => [libruby, libossl] do
+      extract_dir = "#{build_arch_dir}/.#{File.basename arch_lib_file}"
       excludes    = %w[dmyenc.o dmyext.o /openssl/apps/ /openssl/test/]
       extra_objs  = %w[enc ext].map {|s| "#{ruby_dir}/#{s}/#{s}init.o"}
 
@@ -377,40 +389,32 @@ FILTERED_TARGETS.each do |os, sdk, archs|
       chdir build_arch_dir do
         objs = Dir.glob("#{extract_dir}/**/*.o")
           .reject {|path| excludes.any? {|s| path.include? s}}
-        sh %( ar -crs #{lib_file} #{objs.join ' '} #{extra_objs.join ' '} )
+        sh %( ar -crs #{arch_lib_file} #{objs.join ' '} #{extra_objs.join ' '} )
       end
     end
 
-    file framework_lib_file => lib_file
+    file output_lib_file => arch_lib_file
   end
 
-  namespace :framework do
-    inc_ruby_h  = "#{framework_inc_dir}/ruby.h"
-    res_json_rb = "#{framework_res_dir}/json.rb"
+  namespace :output do
+    inc_ruby_h  = "#{output_inc_dir}/ruby.h"
 
-    directory framework_dir
-    directory framework_inc_dir
-    directory framework_res_dir
+    directory output_dir
+    directory output_inc_dir
 
-    file inc_ruby_h => [RUBY_CONFIGURE, framework_inc_dir] do
-      sh %( cp -rf #{RUBY_DIR}/include/* #{framework_inc_dir} )
-      sh %( cp -rf #{INC_DIR}/* #{framework_inc_dir})
-      sh %( patch -p1 -d #{framework_inc_dir} < #{HEADERS_PATCH} )
+    file inc_ruby_h => [RUBY_CONFIGURE, output_inc_dir] do
+      sh %( cp -rf #{RUBY_DIR}/include/* #{output_inc_dir} )
+      sh %( cp -rf #{INC_DIR}/* #{output_inc_dir})
+      sh %( patch -p1 -d #{output_inc_dir} < #{HEADERS_PATCH} )
     end
 
-    file res_json_rb => [RUBY_CONFIGURE, framework_res_dir] do
-      sh %( cp -rf #{RUBY_DIR}/lib/* #{framework_res_dir} )
-      Dir.glob "#{RUBY_DIR}/ext/*/lib" do |lib|
-        sh %( cp -rf #{lib}/* #{framework_res_dir} ) unless Dir.glob("#{lib}/*").empty?
-      end
+    file output_lib_file => output_dir do |t|
+      libs = t.prerequisites.select {|s| s.end_with? '.a'}
+      sh %( lipo -create #{libs.join ' '} -output #{output_lib_file} )
     end
 
-    file framework_lib_file do |t|
-      sh %( lipo -create #{t.prerequisites.join ' '} -output #{framework_lib_file} )
-    end
-
-    file XCFRAMEWORK_INFO_PLIST => [framework_dir, framework_lib_file, inc_ruby_h, res_json_rb]
-  end# framework
+    file OUTPUT_XCFRAMEWORK_INFO_PLIST => [output_lib_file, inc_ruby_h]
+  end# output
 end
 
 

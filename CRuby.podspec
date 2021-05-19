@@ -19,13 +19,14 @@ Pod::Spec.new do |s|
   s.osx.deployment_target = "10.7"
   s.ios.deployment_target = "10.0"
 
-  root = "${PODS_ROOT}/#{s.name}"
+  root = "${PODS_ROOT}/CRuby"
 
   s.requires_arc        = false
+  s.resource_bundles    = {"CRuby" => "CRuby/Resources"}
   s.source_files        = "src/*.m"
   s.libraries           = "z"
-  s.preserve_paths      = "#{s.name}.xcframework"
-  s.vendored_frameworks = "#{s.name}.xcframework"
+  s.preserve_paths      = "CRuby"
+  s.vendored_frameworks = "CRuby/CRuby.xcframework"
 
-  s.prepare_command = "rake download_or_build_all"
+  s.prepare_command = "rake download_or_build"
 end
