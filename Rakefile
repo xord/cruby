@@ -89,6 +89,9 @@ OUTPUT_XCFRAMEWORK_NAME       = "#{NAME}.xcframework"
 OUTPUT_XCFRAMEWORK_DIR        = "#{OUTPUT_DIR}/#{OUTPUT_XCFRAMEWORK_NAME}"
 OUTPUT_XCFRAMEWORK_INFO_PLIST = "#{OUTPUT_XCFRAMEWORK_DIR}/Info.plist"
 
+OUTPUT_INC_DIR = "#{OUTPUT_DIR}/Headers"
+OUTPUT_RUBY_H  = "#{OUTPUT_INC_DIR}/ruby.h"
+
 OUTPUT_RES_DIR  = "#{OUTPUT_DIR}/Resources"
 OUTPUT_RUBY_DIR = "#{OUTPUT_RES_DIR}/ruby"
 OUTPUT_JSON_RB  = "#{OUTPUT_RUBY_DIR}/json.rb"
@@ -120,10 +123,11 @@ task :clobber => :clean do
 end
 
 desc "build"
-task :build => [OUTPUT_XCFRAMEWORK_INFO_PLIST, OUTPUT_JSON_RB]
+task :build => [OUTPUT_XCFRAMEWORK_INFO_PLIST, OUTPUT_RUBY_H, OUTPUT_JSON_RB]
 
 directory BUILD_DIR
 directory OUTPUT_DIR
+directory OUTPUT_INC_DIR
 directory OUTPUT_RUBY_DIR
 
 [
@@ -180,10 +184,14 @@ end
 
 file OUTPUT_XCFRAMEWORK_INFO_PLIST do |t|
   libs = t.prerequisites.select {|s| s.end_with? '.a'}.map {|s| "-library #{s}"}
-  incs = t.prerequisites.select {|s| s.end_with? '.h'}.map {|s| "-headers #{File.dirname s}"}
-  opts = libs.sort.zip(incs.sort).flatten
   sh %( rm -rf #{OUTPUT_XCFRAMEWORK_DIR} )
-  sh %( xcodebuild -create-xcframework -output #{OUTPUT_XCFRAMEWORK_DIR} #{opts.join ' '} )
+  sh %( xcodebuild -create-xcframework -output #{OUTPUT_XCFRAMEWORK_DIR} #{libs.join ' '} )
+end
+
+file OUTPUT_RUBY_H => [RUBY_CONFIGURE, OUTPUT_INC_DIR] do
+  sh %( cp -rf #{RUBY_DIR}/include/* #{OUTPUT_INC_DIR} )
+  sh %( cp -rf #{INC_DIR}/* #{OUTPUT_INC_DIR})
+  sh %( patch -p1 -d #{OUTPUT_INC_DIR} < #{HEADERS_PATCH} )
 end
 
 file OUTPUT_JSON_RB => [RUBY_CONFIGURE, OUTPUT_RUBY_DIR] do
@@ -225,7 +233,6 @@ FILTERED_TARGETS.each do |os, sdk, archs|
 
   build_dir       = "#{BUILD_DIR}/#{sdk}"
   output_dir      = "#{build_dir}/output"
-  output_inc_dir  = "#{output_dir}/include"
   output_lib_file = "#{output_dir}/#{libruby_name}"
 
   archs.each do |arch|
@@ -244,7 +251,7 @@ FILTERED_TARGETS.each do |os, sdk, archs|
     arm = arch =~ /^arm/
 
     namespace :ruby do
-      config_h     = "#{output_inc_dir}/ruby/config-#{sdk}-#{arch}.h"
+      config_h     = "#{OUTPUT_INC_DIR}/ruby/config-#{sdk}-#{arch}.h"
       config_h_dir = File.dirname config_h
       makefile     = "#{ruby_dir}/Makefile"
       host         = "#{arm ? 'arm' : arch}-#{ios ? 'iphone' : 'apple'}-darwin"
@@ -397,23 +404,14 @@ FILTERED_TARGETS.each do |os, sdk, archs|
   end
 
   namespace :output do
-    inc_ruby_h  = "#{output_inc_dir}/ruby.h"
-
     directory output_dir
-    directory output_inc_dir
-
-    file inc_ruby_h => [RUBY_CONFIGURE, output_inc_dir] do
-      sh %( cp -rf #{RUBY_DIR}/include/* #{output_inc_dir} )
-      sh %( cp -rf #{INC_DIR}/* #{output_inc_dir})
-      sh %( patch -p1 -d #{output_inc_dir} < #{HEADERS_PATCH} )
-    end
 
     file output_lib_file => output_dir do |t|
       libs = t.prerequisites.select {|s| s.end_with? '.a'}
       sh %( lipo -create #{libs.join ' '} -output #{output_lib_file} )
     end
 
-    file OUTPUT_XCFRAMEWORK_INFO_PLIST => [output_lib_file, inc_ruby_h]
+    file OUTPUT_XCFRAMEWORK_INFO_PLIST => output_lib_file
   end# output
 end
 
