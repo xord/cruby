@@ -27,6 +27,7 @@ Pod::Spec.new do |s|
   s.libraries           = "z"
   s.preserve_paths      = "CRuby"
   s.vendored_frameworks = "CRuby/CRuby.xcframework"
+  s.xcconfig            = {"HEADER_SEARCH_PATHS" => "#{root}/CRuby/include"}
 
   s.prepare_command = "rake download_or_build"
 end
