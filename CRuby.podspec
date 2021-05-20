@@ -22,12 +22,11 @@ Pod::Spec.new do |s|
   root = "${PODS_ROOT}/CRuby"
 
   s.requires_arc        = false
-  s.resource_bundles    = {"CRuby" => "CRuby/Resources"}
+  s.resource_bundles    = {"CRuby" => "CRuby/lib"}
   s.source_files        = "src/*.m"
   s.libraries           = "z"
   s.preserve_paths      = "CRuby"
   s.vendored_frameworks = "CRuby/CRuby.xcframework"
-  s.xcconfig            = {"HEADER_SEARCH_PATHS" => "#{root}/CRuby/Headers"}
 
   s.prepare_command = "rake download_or_build"
 end
