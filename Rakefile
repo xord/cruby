@@ -227,12 +227,10 @@ FILTERED_TARGETS.each do |os, sdk, archs|
   sdk_root = xcrun sdk, '--show-sdk-path'
   cc_dir   = File.dirname xcrun(sdk, '--find cc')
 
-  libruby_ver  = ruby25_or_higher? ? ".#{CRuby.ruby_version[0, 2].join '.'}" : ""
-  libruby_name = "libruby#{libruby_ver}-static.a"
-
   build_dir       = "#{BUILD_DIR}/#{sdk}"
   output_dir      = "#{build_dir}/output"
-  output_lib_file = "#{output_dir}/#{libruby_name}"
+  output_lib_name = "lib#{NAME}.a"
+  output_lib_file = "#{output_dir}/#{output_lib_name}"
 
   archs.each do |arch|
     build_arch_dir = "#{build_dir}/#{arch}"
@@ -242,9 +240,10 @@ FILTERED_TARGETS.each do |os, sdk, archs|
     ossl_install_dir = "#{build_arch_dir}/openssl-install"
     ossl_config_h    = "#{ossl_install_dir}/include/openssl/opensslconf.h"
 
-    libruby       = "#{ruby_dir}/#{libruby_name}"
+    libruby_ver   = ruby25_or_higher? ? ".#{CRuby.ruby_version[0, 2].join '.'}" : ""
+    libruby       = "#{ruby_dir}/libruby#{libruby_ver}-static.a"
     libossl       = "#{ossl_dir}/libssl.a"
-    arch_lib_file = "#{build_arch_dir}/#{libruby_name}"
+    arch_lib_file = "#{build_arch_dir}/#{output_lib_name}"
 
     ios = os == :ios
     arm = arch =~ /^arm/
