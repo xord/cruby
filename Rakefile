@@ -14,7 +14,7 @@ BUILD_OS      = ENV['os']
 #   => build only for macosx:x86_64 and iphoneos:arm64.
 BUILD_TARGETS = (ENV['targets'] || ENV['target'])&.split(/[ ,]+/)
 
-# $ rake download_or_build_all noprebuilt=1
+# $ rake download_or_build noprebuilt=1
 #   => do not download prebuild archive.
 NO_PREBUILT   = (ENV['noprebuilt'] || 0).to_i != 0
 
