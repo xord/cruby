@@ -229,7 +229,7 @@ FILTERED_TARGETS.each do |os, sdk, archs|
 
   build_dir       = "#{BUILD_DIR}/#{sdk}"
   output_dir      = "#{build_dir}/output"
-  output_lib_name = "lib#{NAME}.a"
+  output_lib_name = "libruby-static.a"
   output_lib_file = "#{output_dir}/#{output_lib_name}"
 
   archs.each do |arch|

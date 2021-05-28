@@ -24,7 +24,7 @@ Pod::Spec.new do |s|
   s.requires_arc        = false
   s.resource_bundles    = {"CRuby" => "CRuby/lib"}
   s.source_files        = "src/*.m"
-  s.libraries           = "z"
+  s.libraries           = "ruby-static", "z"
   s.preserve_paths      = "CRuby"
   s.vendored_frameworks = "CRuby/CRuby.xcframework"
   s.xcconfig            = {"HEADER_SEARCH_PATHS" => "#{root}/CRuby/include"}
