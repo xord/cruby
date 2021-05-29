@@ -92,8 +92,8 @@ OUTPUT_XCFRAMEWORK_INFO_PLIST = "#{OUTPUT_XCFRAMEWORK_DIR}/Info.plist"
 OUTPUT_INC_DIR = "#{OUTPUT_DIR}/include"
 OUTPUT_RUBY_H  = "#{OUTPUT_INC_DIR}/ruby.h"
 
-OUTPUT_LIB_RUBY_DIR = "#{OUTPUT_DIR}/lib/ruby"
-OUTPUT_JSON_RB      = "#{OUTPUT_LIB_RUBY_DIR}/json.rb"
+OUTPUT_LIB_DIR = "#{OUTPUT_DIR}/lib"
+OUTPUT_JSON_RB = "#{OUTPUT_LIB_DIR}/json.rb"
 
 OUTPUT_ARCHIVE   = "#{NAME}_prebuilt-#{CRuby.version}.tar.gz"
 PREBUILT_URL     = "#{GITHUB_URL}/releases/download/v#{CRuby.version}/#{OUTPUT_ARCHIVE}"
@@ -127,7 +127,7 @@ task :build => [OUTPUT_XCFRAMEWORK_INFO_PLIST, OUTPUT_RUBY_H, OUTPUT_JSON_RB]
 directory BUILD_DIR
 directory OUTPUT_DIR
 directory OUTPUT_INC_DIR
-directory OUTPUT_LIB_RUBY_DIR
+directory OUTPUT_LIB_DIR
 
 [
   [RUBY_DIR, RUBY_URL, RUBY_CONFIGURE],
@@ -193,10 +193,10 @@ file OUTPUT_RUBY_H => [RUBY_CONFIGURE, OUTPUT_INC_DIR] do
   sh %( patch -p1 -d #{OUTPUT_INC_DIR} < #{HEADERS_PATCH} )
 end
 
-file OUTPUT_JSON_RB => [RUBY_CONFIGURE, OUTPUT_LIB_RUBY_DIR] do
-  sh %( cp -rf #{RUBY_DIR}/lib/* #{OUTPUT_LIB_RUBY_DIR} )
+file OUTPUT_JSON_RB => [RUBY_CONFIGURE, OUTPUT_LIB_DIR] do
+  sh %( cp -rf #{RUBY_DIR}/lib/* #{OUTPUT_LIB_DIR} )
   Dir.glob "#{RUBY_DIR}/ext/*/lib" do |lib|
-    sh %( cp -rf #{lib}/* #{OUTPUT_LIB_RUBY_DIR} ) unless Dir.glob("#{lib}/*").empty?
+    sh %( cp -rf #{lib}/* #{OUTPUT_LIB_DIR} ) unless Dir.glob("#{lib}/*").empty?
   end
 end
 
