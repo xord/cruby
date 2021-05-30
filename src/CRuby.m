@@ -47,11 +47,13 @@ static NSMutableDictionary *gExtensions = nil;
 	void Init_prelude();
 	void Init_builtin_features();
 	void Init_ruby_description();
+	void rb_call_builtin_inits();
 	Init_enc();
 	Init_ext();
 	Init_prelude();
 	Init_builtin_features();
 	Init_ruby_description();
+	rb_call_builtin_inits();
 
 	[self addLibrary:@"CRuby" bundle:[NSBundle bundleForClass:CRuby.class]];
 
