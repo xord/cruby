@@ -190,7 +190,7 @@ end
 file OUTPUT_RUBY_H => [RUBY_CONFIGURE, OUTPUT_INC_DIR] do
   sh %( cp -rf #{RUBY_DIR}/include/* #{OUTPUT_INC_DIR} )
   sh %( cp -rf #{INC_DIR}/* #{OUTPUT_INC_DIR})
-  sh %( patch -p1 -d #{OUTPUT_INC_DIR} < #{HEADERS_PATCH} )
+  #sh %( patch -p1 -d #{OUTPUT_INC_DIR} < #{HEADERS_PATCH} )
 end
 
 file OUTPUT_JSON_RB => [RUBY_CONFIGURE, OUTPUT_LIB_DIR] do
