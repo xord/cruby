@@ -15,7 +15,7 @@ jobs:
 
       - name: xcode
         run: |
-          sudo xcode-select -s '/Applications/Xcode_11.6.app/Contents/Developer'
+          sudo xcode-select -s '/Applications/Xcode_12.4.app/Contents/Developer'
           xcodebuild -version
 
       - name: ruby 2.7
@@ -23,8 +23,5 @@ jobs:
         with:
           ruby-version: 2.7.x
 
-      - name: ios
-        run: rake ios
-
-      - name: osx
-        run: rake osx
+      - name: build
+        run: rake build

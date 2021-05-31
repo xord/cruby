@@ -16,7 +16,7 @@ pod 'CRuby', git: 'https://github.com/xord/cruby'
 Run the following in a terminal.
 
 ```sh
-$ CRUBY_PLATFORM=ios pod install --verbose
+$ CRUBY_OS=ios pod install --verbose
 ```
 (Due to the long compile time, it is recommended to use the --verbose option)
 

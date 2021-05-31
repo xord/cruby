@@ -5,6 +5,20 @@ require 'open-uri'
 require_relative 'config'
 
 
+# $ rake build os=X
+#   X: macos => build only for macosx.
+#   X: ios   => build only for iphoneos and iphonesimulator.
+BUILD_OS      = ENV['os']
+
+# $ rake build targets="macosx:x86_64, iphoneos:arm64"
+#   => build only for macosx:x86_64 and iphoneos:arm64.
+BUILD_TARGETS = (ENV['targets'] || ENV['target'])&.split(/[ ,]+/)
+
+# $ rake download_or_build noprebuilt=1
+#   => do not download prebuild archive.
+NO_PREBUILT   = (ENV['noprebuilt'] || 0).to_i != 0
+
+
 def read_file (path)
   open(path) {|f| f.read}
 end
@@ -41,73 +55,65 @@ def ruby25_or_higher? ()
 end
 
 
-PLATFORM            = (ENV['platform'] || :osx).intern
-ARCHS               =
-  ENV['archs'].tap {|archs| break archs.split(/[ ,]+/) if archs} ||
-  ENV['arch'] .tap {|arch|  break [arch]               if arch}
-NO_PREBUILT_ARCHIVE = (ENV['noprebuilt'] || 0).to_i != 0
+NAME = "CRuby"
 
-NAME     = "CRuby"
-LIB_NAME = "#{NAME}_#{PLATFORM}"
+TARGETS = [
+  [:macos, :macosx,          [:arm64, :x86_64]],
+  [:ios,   :iphonesimulator, [:arm64, :x86_64]],
+  [:ios,   :iphoneos,        [:arm64]]
+]
 
 ROOT_DIR   = __dir__
 INC_DIR    = "#{ROOT_DIR}/include"
 RUBY_DIR   = "#{ROOT_DIR}/.ruby"
 OSSL_DIR   = "#{ROOT_DIR}/.openssl"
 BUILD_DIR  = "#{ROOT_DIR}/.build"
-OUTPUT_DIR = "#{ROOT_DIR}/CRuby"
+OUTPUT_DIR = "#{ROOT_DIR}/#{NAME}"
 
-RUBY_CONFIGURE = "#{RUBY_DIR}/configure"
-OSSL_CONFIGURE = "#{OSSL_DIR}/Configure"
+RUBY_CONFIGURE   = "#{RUBY_DIR}/configure"
+OSSL_CONFIGURE   = "#{OSSL_DIR}/Configure"
+OSSL_CUSTOM_CONF = "#{OSSL_DIR}/Configurations/999-custom.conf"
 
 HEADERS_PATCH         = "#{ROOT_DIR}/headers.patch"
 HEADERS_PATCH_DEV_DIR = "#{ROOT_DIR}/.headers"
 
-NATIVE_RUBY_DIR         = "#{BUILD_DIR}/native/ruby"
-NATIVE_OSSL_DIR         = "#{BUILD_DIR}/native/openssl"
-NATIVE_RUBY_INSTALL_DIR = "#{BUILD_DIR}/native/ruby-install"
-NATIVE_OSSL_INSTALL_DIR = "#{BUILD_DIR}/native/openssl-install"
+NATIVE_BUILD_DIR        = "#{BUILD_DIR}/native"
+NATIVE_RUBY_INSTALL_DIR = "#{NATIVE_BUILD_DIR}/ruby-install"
 NATIVE_RUBY_BIN         = "#{NATIVE_RUBY_INSTALL_DIR}/bin/ruby"
-NATIVE_OSSL_LIB         = "#{NATIVE_OSSL_INSTALL_DIR}/libssl.a"
 
 SYSTEM_RUBY_VER = RUBY_VERSION[/^(\d+\.\d+)\.\d+/, 1]
  EMBED_RUBY_VER = CRuby.ruby_version[0..1].join('.')
 BASE_RUBY       = SYSTEM_RUBY_VER != EMBED_RUBY_VER ? NATIVE_RUBY_BIN : nil
 
-OUTPUT_LIB_NAME = "lib#{LIB_NAME}.a"
-OUTPUT_LIB_FILE = "#{OUTPUT_DIR}/#{OUTPUT_LIB_NAME}"
-OUTPUT_LIB_DIR  = "#{OUTPUT_DIR}/lib"
-OUTPUT_INC_DIR  = "#{OUTPUT_DIR}/include"
+OUTPUT_XCFRAMEWORK_NAME       = "#{NAME}.xcframework"
+OUTPUT_XCFRAMEWORK_DIR        = "#{OUTPUT_DIR}/#{OUTPUT_XCFRAMEWORK_NAME}"
+OUTPUT_XCFRAMEWORK_INFO_PLIST = "#{OUTPUT_XCFRAMEWORK_DIR}/Info.plist"
+
+OUTPUT_INC_DIR = "#{OUTPUT_DIR}/include"
+OUTPUT_RUBY_H  = "#{OUTPUT_INC_DIR}/ruby.h"
+
+OUTPUT_LIB_DIR = "#{OUTPUT_DIR}/lib"
+OUTPUT_JSON_RB = "#{OUTPUT_LIB_DIR}/json.rb"
 
 OUTPUT_ARCHIVE   = "#{NAME}_prebuilt-#{CRuby.version}.tar.gz"
 PREBUILT_URL     = "#{GITHUB_URL}/releases/download/v#{CRuby.version}/#{OUTPUT_ARCHIVE}"
 PREBUILT_ARCHIVE = "downloaded_#{OUTPUT_ARCHIVE}"
 
-TARGETS = {
-  osx: {
-    macosx:          %w[x86_64],
-  },
-  ios: {
-    iphonesimulator: %w[x86_64],
-    iphoneos:        %w[arm64]
-  }
-}[PLATFORM]
-
-OSSL_CONFIGURATIONS = {
-  [:macosx,          'x86_64'] => 'default',
-  [:iphonesimulator, 'x86_64'] => 'iphoneos-cross',
-  [:iphoneos,        'arm64']  => 'ios64-cross'
-}
-
 PATHS = ENV['PATH']
 ENV['ac_cv_func_setpgrp_void'] = 'yes'
+
+FILTERED_TARGETS = TARGETS.each {|os, sdk, archs|
+  archs.reject! {|arch|
+    BUILD_TARGETS && !BUILD_TARGETS.include?("#{sdk}:#{arch}")
+  }
+}.reject {|os, sdk, archs| BUILD_OS && os.to_s != BUILD_OS || archs.empty?}
 
 
 task :default => :build
 
 desc "delete all temporary files"
 task :clean do
-  sh %( rm -rf #{OUTPUT_ARCHIVE} #{BUILD_DIR} #{OUTPUT_DIR} )
+  sh %( rm -rf #{BUILD_DIR} #{OUTPUT_DIR} #{OUTPUT_ARCHIVE} )
 end
 
 desc "delete all generated files"
@@ -116,12 +122,12 @@ task :clobber => :clean do
 end
 
 desc "build"
-task :build => [OUTPUT_LIB_DIR, OUTPUT_INC_DIR, OUTPUT_LIB_FILE]
+task :build => [OUTPUT_XCFRAMEWORK_INFO_PLIST, OUTPUT_RUBY_H, OUTPUT_JSON_RB]
 
 directory BUILD_DIR
 directory OUTPUT_DIR
-directory NATIVE_RUBY_DIR
-directory NATIVE_OSSL_DIR
+directory OUTPUT_INC_DIR
+directory OUTPUT_LIB_DIR
 
 [
   [RUBY_DIR, RUBY_URL, RUBY_CONFIGURE],
@@ -145,125 +151,112 @@ directory NATIVE_OSSL_DIR
   end
 end
 
-file NATIVE_RUBY_BIN => [RUBY_CONFIGURE, NATIVE_RUBY_DIR, NATIVE_OSSL_LIB] do
-  chdir NATIVE_RUBY_DIR do
-    opts = {
-      'prefix'           => NATIVE_RUBY_INSTALL_DIR,
-      'with-openssl-dir' => NATIVE_OSSL_INSTALL_DIR
-    }.map {|k, v| "--#{k}=#{v}"}
-    sh %( #{RUBY_CONFIGURE} #{opts.join ' '} --disable-install-doc )
-    sh %( make && make install )
-  end
+file OSSL_CUSTOM_CONF do
+  sdk_path = -> sdk {xcrun sdk, '--show-sdk-path'}
+
+  write_file OSSL_CUSTOM_CONF, <<~END
+    my %targets = (
+      "macosx-x86_64" => {
+        inherit_from => ["darwin64-x86_64-cc"],
+        cflags       => add("-isysroot #{sdk_path[:macosx]}"),
+      },
+      "macosx-arm64" => {
+        inherit_from => ["darwin64-arm64-cc"],
+        cflags       => add("-isysroot #{sdk_path[:macosx]}"),
+      },
+      "iphonesimulator-x86_64" => {
+        inherit_from => ["ios-common"],
+        cflags       => add("-isysroot #{sdk_path[:iphonesimulator]} -arch x86_64 -fno-common"),
+      },
+      "iphonesimulator-arm64" => {
+        inherit_from => ["ios-common"],
+        cflags       => add("-isysroot #{sdk_path[:iphonesimulator]} -arch arm64 -fno-common"),
+      },
+      "iphoneos-arm64" => {
+        inherit_from => ["ios64-xcrun"],
+        CC           => "cc",
+        cflags       => add("-isysroot #{sdk_path[:iphoneos]}"),
+      },
+    );
+  END
 end
 
-file NATIVE_OSSL_LIB => [OSSL_CONFIGURE, NATIVE_OSSL_DIR] do
-  chdir NATIVE_OSSL_DIR do
-    sh %( #{OSSL_DIR}/config --prefix=#{NATIVE_OSSL_INSTALL_DIR} )
-    sh %( make && make install_sw )
-  end
+file OUTPUT_XCFRAMEWORK_INFO_PLIST do |t|
+  libs = t.prerequisites.select {|s| s.end_with? '.a'}.map {|s| "-library #{s}"}
+  sh %( rm -rf #{OUTPUT_XCFRAMEWORK_DIR} )
+  sh %( xcodebuild -create-xcframework -output #{OUTPUT_XCFRAMEWORK_DIR} #{libs.join ' '} )
 end
 
-file OUTPUT_LIB_DIR => [RUBY_CONFIGURE, OUTPUT_DIR] do
-  sh %( cp -rf #{RUBY_DIR}/lib #{OUTPUT_DIR} )
+file OUTPUT_RUBY_H => [RUBY_CONFIGURE, OUTPUT_INC_DIR] do
+  sh %( cp -rf #{RUBY_DIR}/include/* #{OUTPUT_INC_DIR} )
+  sh %( cp -rf #{INC_DIR}/* #{OUTPUT_INC_DIR})
+  sh %( patch -p1 -d #{OUTPUT_INC_DIR} < #{HEADERS_PATCH} )
+end
+
+file OUTPUT_JSON_RB => [RUBY_CONFIGURE, OUTPUT_LIB_DIR] do
+  sh %( cp -rf #{RUBY_DIR}/lib/* #{OUTPUT_LIB_DIR} )
   Dir.glob "#{RUBY_DIR}/ext/*/lib" do |lib|
     sh %( cp -rf #{lib}/* #{OUTPUT_LIB_DIR} ) unless Dir.glob("#{lib}/*").empty?
   end
-end
-
-file OUTPUT_INC_DIR => [RUBY_CONFIGURE, OUTPUT_DIR] do
-  sh %( cp -rf #{RUBY_DIR}/include #{OUTPUT_DIR} )
-  sh %( cp -rf #{INC_DIR} #{OUTPUT_DIR})
-  sh %( patch -p1 -d #{OUTPUT_DIR}/include < #{HEADERS_PATCH} )
-end
-
-file OUTPUT_LIB_FILE do |t|
-  sh %( lipo -create #{t.prerequisites.join ' '} -output #{OUTPUT_LIB_FILE} )
-end
-
-
-desc "build files for all platforms"
-task :all => [:osx, :ios]
-
-desc "build files for macOS"
-task :osx do
-  sh %( rake platform=osx )
-end
-
-desc "build files for iOS"
-task :ios do
-  sh %( rake platform=ios )
 end
 
 
 desc "archive built files for deploy"
 task :archive => OUTPUT_ARCHIVE
 
-file OUTPUT_ARCHIVE => :all do
+file OUTPUT_ARCHIVE => :build do
   sh %( tar cvzf #{OUTPUT_ARCHIVE} #{OUTPUT_DIR.sub(ROOT_DIR + '/', '')} )
 end
 
 desc "download prebuilt binary or build all"
-task :download_or_build_all => PREBUILT_ARCHIVE do
+task :download_or_build => PREBUILT_ARCHIVE do
   if File.exist?(PREBUILT_ARCHIVE)
     sh %( tar xzf #{PREBUILT_ARCHIVE} )
   else
-    sh %( rake all )
+    sh %( rake build )
   end
 end
 
 file PREBUILT_ARCHIVE do
-  next if NO_PREBUILT_ARCHIVE
+  next if NO_PREBUILT
   download PREBUILT_URL, PREBUILT_ARCHIVE rescue OpenURI::HTTPError
 end
 
 
-namespace :headers_patch do
-  task :setup => RUBY_CONFIGURE do
-    sh %( cp -r "#{RUBY_DIR}/include" #{HEADERS_PATCH_DEV_DIR} )
-    chdir HEADERS_PATCH_DEV_DIR do
-      sh %( git init && git add . && git commit -m '-' )
-      sh %( patch -p1 -d . < #{HEADERS_PATCH} )
-    end
-  end
-
-  task :update do
-    chdir HEADERS_PATCH_DEV_DIR do
-      sh %( git diff > #{HEADERS_PATCH} )
-    end
-  end
-end
-
-
-TARGETS.each do |sdk, archs|
+FILTERED_TARGETS.each do |os, sdk, archs|
   sdk_root = xcrun sdk, '--show-sdk-path'
   cc_dir   = File.dirname xcrun(sdk, '--find cc')
-  archs    = archs.select {|arch| ARCHS.include? arch} if ARCHS
+
+  build_dir       = "#{BUILD_DIR}/#{sdk}"
+  output_dir      = "#{build_dir}/output"
+  output_lib_name = "libruby-static.a"
+  output_lib_file = "#{output_dir}/#{output_lib_name}"
 
   archs.each do |arch|
-    build_dir = "#{BUILD_DIR}/#{sdk}_#{arch}"
-    ruby_dir  = "#{build_dir}/ruby"
-    ossl_dir  = "#{build_dir}/openssl"
+    build_arch_dir = "#{build_dir}/#{arch}"
+    ruby_dir       = "#{build_arch_dir}/ruby"
+    ossl_dir       = "#{build_arch_dir}/openssl"
 
-    libruby_ver = ruby25_or_higher? ? ".#{CRuby.ruby_version.join '.'}" : ""
-    libruby     = "#{ruby_dir}/libruby#{libruby_ver}-static.a"
-    libossl     = "#{ossl_dir}/libssl.a"
-    lib_file    = "#{build_dir}/#{OUTPUT_LIB_NAME}"
-
-    ossl_install_dir = "#{build_dir}/openssl-install"
+    ossl_install_dir = "#{build_arch_dir}/openssl-install"
     ossl_config_h    = "#{ossl_install_dir}/include/openssl/opensslconf.h"
 
-    ios = PLATFORM == :ios
+    libruby_ver   = ruby25_or_higher? ? ".#{CRuby.ruby_version[0, 2].join '.'}" : ""
+    libruby       = "#{ruby_dir}/libruby#{libruby_ver}-static.a"
+    libossl       = "#{ossl_dir}/libssl.a"
+    arch_lib_file = "#{build_arch_dir}/#{output_lib_name}"
+
+    ios = os == :ios
     arm = arch =~ /^arm/
 
     namespace :ruby do
-      config_h     = "#{OUTPUT_INC_DIR}/ruby/config-#{PLATFORM}_#{arch}.h"
+      config_h     = "#{OUTPUT_INC_DIR}/ruby/config-#{sdk}-#{arch}.h"
       config_h_dir = File.dirname config_h
       makefile     = "#{ruby_dir}/Makefile"
       host         = "#{arm ? 'arm' : arch}-#{ios ? 'iphone' : 'apple'}-darwin"
-      flags        = "-pipe -Os -isysroot #{sdk_root}"
-      # -gdwarf-2 -no-cpp-precomp -mthumb
+      isysroot     = "-isysroot #{sdk_root}"
+      flags        = "-pipe -Os #{isysroot}" # -gdwarf-2 -no-cpp-precomp -mthumb
 
-      if ios
+      if "#{sdk}:#{arch}" == 'iphonesimulator:x86_64'
         flags << " -miphoneos-version-min=10.0"
 
         # to skip checking macos version
@@ -307,6 +300,7 @@ TARGETS.each do |sdk, archs|
             'CPPFLAGS' => "#{flags}",
             'CFLAGS'   => "#{flags} -fvisibility=hidden",
             'CXXFLAGS' => "-fvisibility-inline-hidden",
+            'ASFLAGS'  => "#{isysroot}",
             'LDFLAGS'  => "#{flags} -L#{sdk_root}/usr/lib -lSystem"
           }.map {|k, v| "#{k}='#{v}'"}
           opts = %W[
@@ -332,7 +326,7 @@ TARGETS.each do |sdk, archs|
         src = Dir.glob("#{ruby_dir}/.ext/include/**/ruby/config.h").first
         raise unless src
 
-        # avoid crach on AdMob initialization.
+        # avoid crash on AdMob initialization.
         modify_file src do |s|
           %w[
             HAVE_BACKTRACE
@@ -355,44 +349,30 @@ TARGETS.each do |sdk, archs|
     end# ruby
 
     namespace :openssl do
-      conf = OSSL_CONFIGURATIONS[[sdk, arch]]
-      envs = {
-        CROSS_COMPILE: "#{cc_dir}/",
-        CROSS_TOP:     "#{xcrun sdk, '--show-sdk-platform-path'}/Developer",
-        CROSS_SDK:     File.basename(sdk_root)
-      }.map {|k, v| "#{k}=#{v}"}
-
       directory ossl_dir
       directory ossl_install_dir
 
-      file libossl => [OSSL_CONFIGURE, ossl_dir] do
-        next unless conf
+      file libossl => [OSSL_CONFIGURE, OSSL_CUSTOM_CONF, ossl_dir] do
         chdir ossl_dir do
-          configure = OSSL_CONFIGURE
-          opts      = %W[
+          envs = "CROSS_COMPILE=#{cc_dir}/"
+          opts = %W[
             --prefix=#{ossl_install_dir}
             no-shared
           ]
-          if conf == 'default'
-            configure = configure.sub(/Configure$/, 'config')
-            conf      = ''
-            envs.clear
-          end
-          sh %( #{envs.join ' '} #{configure} #{opts.join ' '} #{conf} )
-          sh %( #{envs.join ' '} make )
+          sh %( #{envs} #{OSSL_CONFIGURE} #{opts.join ' '} #{sdk}-#{arch} )
+          sh %( #{envs} make )
         end
       end
 
       file ossl_config_h => [libossl, ossl_install_dir] do
-        next unless conf
         chdir ossl_dir do
           sh %( make install_sw | grep include )
         end
       end
     end# openssl
 
-    file lib_file => [libruby, libossl] do
-      extract_dir = "#{build_dir}/.#{OUTPUT_LIB_NAME}"
+    file arch_lib_file => [libruby, libossl] do
+      extract_dir = "#{build_arch_dir}/.#{File.basename arch_lib_file}"
       excludes    = %w[dmyenc.o dmyext.o /openssl/apps/ /openssl/test/]
       extra_objs  = %w[enc ext].map {|s| "#{ruby_dir}/#{s}/#{s}init.o"}
 
@@ -402,7 +382,7 @@ TARGETS.each do |sdk, archs|
         .reject {|path| excludes.any? {|s| path.include? s}}
         .each do |path|
 
-        a_dir    = path[%r|#{build_dir}/(.+)\.a$|, 1]
+        a_dir    = path[%r|#{build_arch_dir}/(.+)\.a$|, 1]
         objs_dir = "#{extract_dir}/#{a_dir}"
 
         sh %( mkdir -p #{objs_dir} && cp #{path} #{objs_dir} )
@@ -411,15 +391,70 @@ TARGETS.each do |sdk, archs|
         end
       end
 
-      chdir build_dir do
-        objs =
-          Dir.glob("#{extract_dir}/**/*.o")
+      chdir build_arch_dir do
+        objs = Dir.glob("#{extract_dir}/**/*.o")
           .reject {|path| excludes.any? {|s| path.include? s}}
-        sh %( ar -crs #{lib_file} #{objs.join ' '} #{extra_objs.join ' '} )
+        sh %( ar -crs #{arch_lib_file} #{objs.join ' '} #{extra_objs.join ' '} )
       end
     end
 
-    file OUTPUT_LIB_FILE => lib_file
+    file output_lib_file => arch_lib_file
+  end
 
-  end# arch
+  namespace :output do
+    directory output_dir
+
+    file output_lib_file => output_dir do |t|
+      libs = t.prerequisites.select {|s| s.end_with? '.a'}
+      sh %( lipo -create #{libs.join ' '} -output #{output_lib_file} )
+    end
+
+    file OUTPUT_XCFRAMEWORK_INFO_PLIST => output_lib_file
+  end# output
 end
+
+
+namespace :native do
+  ruby_dir         = "#{NATIVE_BUILD_DIR}/ruby"
+  ossl_dir         = "#{NATIVE_BUILD_DIR}/openssl"
+  ossl_install_dir = "#{NATIVE_BUILD_DIR}/openssl-install"
+  ossl_lib         = "#{ossl_install_dir}/lib/libssl.a"
+
+  directory ruby_dir
+  directory ossl_dir
+
+  file NATIVE_RUBY_BIN => [RUBY_CONFIGURE, ruby_dir, ossl_lib] do
+    chdir ruby_dir do
+      opts = {
+        'prefix'           => NATIVE_RUBY_INSTALL_DIR,
+        'with-openssl-dir' => ossl_install_dir
+      }.map {|k, v| "--#{k}=#{v}"}
+      sh %( #{RUBY_CONFIGURE} #{opts.join ' '} --disable-install-doc )
+      sh %( make && make install )
+    end
+  end
+
+  file ossl_lib => [OSSL_CONFIGURE, ossl_dir] do
+    chdir ossl_dir do
+      sh %( #{OSSL_DIR}/config --prefix=#{ossl_install_dir} )
+      sh %( make && make install_sw )
+    end
+  end
+end# native
+
+
+namespace :headers_patch do
+  task :setup => RUBY_CONFIGURE do
+    sh %( cp -r "#{RUBY_DIR}/include" #{HEADERS_PATCH_DEV_DIR} )
+    chdir HEADERS_PATCH_DEV_DIR do
+      sh %( git init && git add . && git commit -m '-' )
+      sh %( patch -p1 -d . < #{HEADERS_PATCH} )
+    end
+  end
+
+  task :update do
+    chdir HEADERS_PATCH_DEV_DIR do
+      sh %( git diff > #{HEADERS_PATCH} )
+    end
+  end
+end# headers_patch
