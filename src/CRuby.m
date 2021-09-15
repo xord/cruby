@@ -1,6 +1,7 @@
 #import "CRuby.h"
 #import "CRBValue.h"
 #include <ruby.h>
+#include <ruby/version.h>
 
 
 #ifndef TAG_RAISE
