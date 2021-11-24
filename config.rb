@@ -1,12 +1,12 @@
 # -*- mode: ruby; coding: utf-8 -*-
 
 
-POD_VERSION = 1
+POD_VERSION = 0
 
 GITHUB_URL  = "https://github.com/xord/cruby"
 
-RUBY_URL    = 'https://cache.ruby-lang.org/pub/ruby/3.0/ruby-3.0.2.tar.gz'
-RUBY_SHA256 = '5085dee0ad9f06996a8acec7ebea4a8735e6fac22f22e2d98c3f2bc3bef7e6f1'
+RUBY_URL    = 'https://cache.ruby-lang.org/pub/ruby/3.0/ruby-3.0.3.tar.gz'
+RUBY_SHA256 = '3586861cb2df56970287f0fd83f274bd92058872d830d15570b36def7f1a92ac'
 
 OSSL_URL    = 'https://www.openssl.org/source/openssl-1.1.1l.tar.gz'
 OSSL_SHA256 = '0b7a3e5e59c34827fe0c3a74b7ec8baef302b98fa80088d7f9153aa16fa76bd1'
