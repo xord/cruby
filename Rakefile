@@ -92,8 +92,8 @@ OUTPUT_XCFRAMEWORK_INFO_PLIST = "#{OUTPUT_XCFRAMEWORK_DIR}/Info.plist"
 OUTPUT_INC_DIR = "#{OUTPUT_DIR}/include"
 OUTPUT_RUBY_H  = "#{OUTPUT_INC_DIR}/ruby.h"
 
-OUTPUT_LIB_DIR = "#{OUTPUT_DIR}/lib"
-OUTPUT_JSON_RB = "#{OUTPUT_LIB_DIR}/json.rb"
+OUTPUT_LIB_DIR     = "#{OUTPUT_DIR}/lib"
+OUTPUT_RBCONFIG_RB = "#{OUTPUT_LIB_DIR}/rbconfig.rb"
 
 OUTPUT_ARCHIVE   = "#{NAME}_prebuilt-#{CRuby.version}.tar.gz"
 PREBUILT_URL     = "#{GITHUB_URL}/releases/download/v#{CRuby.version}/#{OUTPUT_ARCHIVE}"
@@ -122,7 +122,7 @@ task :clobber => :clean do
 end
 
 desc "build"
-task :build => [OUTPUT_XCFRAMEWORK_INFO_PLIST, OUTPUT_RUBY_H, OUTPUT_JSON_RB]
+task :build => [OUTPUT_XCFRAMEWORK_INFO_PLIST, OUTPUT_RUBY_H, OUTPUT_RBCONFIG_RB]
 
 directory BUILD_DIR
 directory OUTPUT_DIR
@@ -193,7 +193,8 @@ file OUTPUT_RUBY_H => [RUBY_CONFIGURE, OUTPUT_INC_DIR] do
   sh %( patch -p1 -d #{OUTPUT_INC_DIR} < #{HEADERS_PATCH} )
 end
 
-file OUTPUT_JSON_RB => [RUBY_CONFIGURE, OUTPUT_LIB_DIR] do
+file OUTPUT_RBCONFIG_RB => [RUBY_CONFIGURE, OUTPUT_LIB_DIR] do
+  write_file OUTPUT_RBCONFIG_RB, "require 'rbconfig-#{CRUBY_BUILD_SDK_AND_ARCH}'"
   sh %( cp -rf #{RUBY_DIR}/lib/* #{OUTPUT_LIB_DIR} )
   Dir.glob "#{RUBY_DIR}/ext/*/lib" do |lib|
     sh %( cp -rf #{lib}/* #{OUTPUT_LIB_DIR} ) unless Dir.glob("#{lib}/*").empty?
@@ -240,9 +241,13 @@ FILTERED_TARGETS.each do |os, sdk, archs|
     ossl_install_dir = "#{build_arch_dir}/openssl-install"
     ossl_config_h    = "#{ossl_install_dir}/include/openssl/opensslconf.h"
 
-    libruby_ver   = ruby25_or_higher? ? ".#{CRuby.ruby_version[0, 2].join '.'}" : ""
-    libruby       = "#{ruby_dir}/libruby#{libruby_ver}-static.a"
-    libossl       = "#{ossl_dir}/libssl.a"
+    libruby_ver = ruby25_or_higher? ? ".#{CRuby.ruby_version[0, 2].join '.'}" : ""
+    libruby     = "#{ruby_dir}/libruby#{libruby_ver}-static.a"
+    libossl     = "#{ossl_dir}/libssl.a"
+
+    rbconfig_rb     = "#{OUTPUT_LIB_DIR}/rbconfig-#{sdk}-#{arch}.rb"
+    rbconfig_rb_dir = File.dirname rbconfig_rb
+
     arch_lib_file = "#{build_arch_dir}/#{output_lib_name}"
 
     ios = os == :ios
@@ -371,6 +376,12 @@ FILTERED_TARGETS.each do |os, sdk, archs|
       end
     end# openssl
 
+    directory rbconfig_rb_dir
+
+    file rbconfig_rb => [libruby, rbconfig_rb_dir] do
+      sh %( cp "#{ruby_dir}/rbconfig.rb" #{rbconfig_rb} )
+    end
+
     file arch_lib_file => [libruby, libossl] do
       extract_dir = "#{build_arch_dir}/.#{File.basename arch_lib_file}"
       excludes    = %w[dmyenc.o dmyext.o /openssl/apps/ /openssl/test/]
@@ -398,7 +409,7 @@ FILTERED_TARGETS.each do |os, sdk, archs|
       end
     end
 
-    file output_lib_file => arch_lib_file
+    file output_lib_file => [arch_lib_file, rbconfig_rb]
   end
 
   namespace :output do

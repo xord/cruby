@@ -1,4 +1,5 @@
 #import "CRuby.h"
+#import "CRubyConfig.h"
 #import "CRBValue.h"
 #include <ruby.h>
 #include <ruby/version.h>
@@ -67,10 +68,33 @@ static NSMutableDictionary *gExtensions = nil;
 	[self eval:@
 		"module Kernel;"
 		"  alias cruby_require__ require;"
-		"  def require (*args);"
+		"  def require(*args);"
 		"    CRuby.require_extension(*args) || cruby_require__(*args);"
 		"  end;"
 		"end"];
+
+	[self eval: [NSString stringWithFormat:
+		@"Object.const_set(:CRUBY_BUILD_SDK_AND_ARCH, %@)",
+		[self getCRubyBuildSDKAndArch]]];
+}
+
++ (NSString*)getCRubyBuildSDKAndArch
+{
+#if   defined(CRUBY_IPHONESIMULATOR_X86_64)
+	return         @"'iphonesimulator-x86_64'";
+#elif defined(CRUBY_IPHONESIMULATOR_ARM64)
+	return         @"'iphonesimulator-arm64'";
+#elif defined(CRUBY_IPHONEOS_X86_64)
+	return         @"'iphoneos-x86_64'";
+#elif defined(CRUBY_IPHONEOS_ARM64)
+	return         @"'iphoneos-arm64'";
+#elif defined(CRUBY_MACOSX_X86_64)
+	return         @"'macosx-x86_64'";
+#elif defined(CRUBY_MACOSX_ARM64)
+	return         @"'macosx-arm64'";
+#else
+	return @"nil";
+#endif
 }
 
 + (void)finalize
