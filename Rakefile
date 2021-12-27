@@ -194,7 +194,7 @@ file OUTPUT_RUBY_H => [RUBY_CONFIGURE, OUTPUT_INC_DIR] do
 end
 
 file OUTPUT_RBCONFIG_RB => [RUBY_CONFIGURE, OUTPUT_LIB_DIR] do
-  write_file OUTPUT_RBCONFIG_RB, "require 'rbconfig-#{CRUBY_BUILD_SDK_AND_ARCH}'"
+  write_file OUTPUT_RBCONFIG_RB, 'require "rbconfig-#{CRUBY_BUILD_SDK_AND_ARCH}"'
   sh %( cp -rf #{RUBY_DIR}/lib/* #{OUTPUT_LIB_DIR} )
   Dir.glob "#{RUBY_DIR}/ext/*/lib" do |lib|
     sh %( cp -rf #{lib}/* #{OUTPUT_LIB_DIR} ) unless Dir.glob("#{lib}/*").empty?
