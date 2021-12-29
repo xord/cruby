@@ -74,9 +74,6 @@ RUBY_CONFIGURE   = "#{RUBY_DIR}/configure"
 OSSL_CONFIGURE   = "#{OSSL_DIR}/Configure"
 OSSL_CUSTOM_CONF = "#{OSSL_DIR}/Configurations/999-custom.conf"
 
-HEADERS_PATCH         = "#{ROOT_DIR}/headers.patch"
-HEADERS_PATCH_DEV_DIR = "#{ROOT_DIR}/.headers"
-
 NATIVE_BUILD_DIR        = "#{BUILD_DIR}/native"
 NATIVE_RUBY_INSTALL_DIR = "#{NATIVE_BUILD_DIR}/ruby-install"
 NATIVE_RUBY_BIN         = "#{NATIVE_RUBY_INSTALL_DIR}/bin/ruby"
@@ -117,9 +114,7 @@ task :clean do
 end
 
 desc "delete all generated files"
-task :clobber => :clean do
-  sh %( rm -rf #{HEADERS_PATCH_DEV_DIR} )
-end
+task :clobber => :clean
 
 desc "build"
 task :build => [OUTPUT_XCFRAMEWORK_INFO_PLIST, OUTPUT_RUBY_H, OUTPUT_RBCONFIG_RB]
@@ -190,7 +185,6 @@ end
 file OUTPUT_RUBY_H => [RUBY_CONFIGURE, OUTPUT_INC_DIR] do
   sh %( cp -rf #{RUBY_DIR}/include/* #{OUTPUT_INC_DIR} )
   sh %( cp -rf #{INC_DIR}/* #{OUTPUT_INC_DIR})
-  sh %( patch -p1 -d #{OUTPUT_INC_DIR} < #{HEADERS_PATCH} )
 end
 
 file OUTPUT_RBCONFIG_RB => [RUBY_CONFIGURE, OUTPUT_LIB_DIR] do
@@ -455,20 +449,3 @@ namespace :native do
     end
   end
 end# native
-
-
-namespace :headers_patch do
-  task :setup => RUBY_CONFIGURE do
-    sh %( cp -r "#{RUBY_DIR}/include" #{HEADERS_PATCH_DEV_DIR} )
-    chdir HEADERS_PATCH_DEV_DIR do
-      sh %( git init && git add . && git commit -m '-' )
-      sh %( patch -p1 -d . < #{HEADERS_PATCH} )
-    end
-  end
-
-  task :update do
-    chdir HEADERS_PATCH_DEV_DIR do
-      sh %( git diff > #{HEADERS_PATCH} )
-    end
-  end
-end# headers_patch
