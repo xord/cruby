@@ -331,12 +331,15 @@ FILTERED_TARGETS.each do |os, sdk, archs|
         src = Dir.glob("#{ruby_dir}/.ext/include/**/ruby/config.h").first
         raise unless src
 
-        # avoid crash on AdMob initialization.
         modify_file src do |s|
           %w[
+            # avoid crash on AdMob initialization.
             HAVE_BACKTRACE
+
+            # for app store review.
             HAVE_SYSCALL
             HAVE___SYSCALL
+            HAVE_GETENTROPY
           ].each do |macro|
             s = s.gsub /#define\s+#{macro}\s+1/, "#undef #{macro}"
           end
