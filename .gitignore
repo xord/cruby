@@ -4,7 +4,6 @@
 /.ruby
 /.openssl
 /.build
-/.headers
 /CRuby
 
 .DS_Store
