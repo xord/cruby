@@ -1,0 +1,38 @@
+diff --git a/ruby/internal/attr/noalias.h b/ruby/internal/attr/noalias.h
+index 0790ef6..f021880 100644
+--- a/ruby/internal/attr/noalias.h
++++ b/ruby/internal/attr/noalias.h
+@@ -61,7 +61,7 @@
+ #  */
+ # define RBIMPL_ATTR_NOALIAS() /* void */
+ #elif RBIMPL_HAS_DECLSPEC_ATTRIBUTE(noalias)
+-# define RBIMPL_ATTR_NOALIAS() __declspec(noalias)
++# define RBIMPL_ATTR_NOALIAS()
+ #else
+ # define RBIMPL_ATTR_NOALIAS() /* void */
+ #endif
+diff --git a/ruby/internal/attr/noreturn.h b/ruby/internal/attr/noreturn.h
+index 5839212..4c84208 100644
+--- a/ruby/internal/attr/noreturn.h
++++ b/ruby/internal/attr/noreturn.h
+@@ -26,7 +26,7 @@
+ 
+ /** Wraps (or simulates) `[[noreturn]]` */
+ #if RBIMPL_HAS_DECLSPEC_ATTRIBUTE(noreturn)
+-# define RBIMPL_ATTR_NORETURN() __declspec(noreturn)
++# define RBIMPL_ATTR_NORETURN()
+ 
+ #elif RBIMPL_HAS_ATTRIBUTE(noreturn)
+ # define RBIMPL_ATTR_NORETURN() __attribute__((__noreturn__))
+diff --git a/ruby/internal/core/rbasic.h b/ruby/internal/core/rbasic.h
+index 4617f74..24e4f55 100644
+--- a/ruby/internal/core/rbasic.h
++++ b/ruby/internal/core/rbasic.h
+@@ -60,7 +60,6 @@ enum ruby_rvalue_flags {
+  * common.
+  */
+ struct
+-RUBY_ALIGNAS(SIZEOF_VALUE)
+ RBasic {
+ 
+     /**
