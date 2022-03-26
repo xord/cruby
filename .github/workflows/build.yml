@@ -14,10 +14,10 @@ jobs:
           sudo xcode-select -s '/Applications/Xcode_12.4.app/Contents/Developer'
           xcodebuild -version
 
-      - name: ruby 2.7
+      - name: ruby 3.1
         uses: actions/setup-ruby@v1
         with:
-          ruby-version: 2.7.x
+          ruby-version: 3.1.x
 
       - name: build
         run: rake build
