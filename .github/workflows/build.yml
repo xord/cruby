@@ -15,9 +15,9 @@ jobs:
           xcodebuild -version
 
       - name: ruby 3.1
-        uses: actions/setup-ruby@v1
+        uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 3.1.x
+          ruby-version: 3.1
 
       - name: build
         run: rake build
