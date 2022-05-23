@@ -177,13 +177,13 @@ static NSMutableDictionary *gExtensions = nil;
 		if (state == TAG_RAISE && RTEST(exception))
 		{
 			rb_set_errinfo(Qnil);
-			if (rescue) rescue([[CRBValue alloc] initWithValue:exception]);
+			if (rescue) rescue([[[CRBValue alloc] initWithValue:exception] autorelease]);
 		}
 		else
 			rb_jump_tag(state);
 	}
 
-	return ret == Qnil ? nil : [[CRBValue alloc] initWithValue:ret];
+	return ret == Qnil ? nil : [[[CRBValue alloc] initWithValue:ret] autorelease];
 }
 
 + (void)addLibrary:(NSString *)name bundle:(NSBundle *)bundle
