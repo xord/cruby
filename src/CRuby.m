@@ -204,6 +204,7 @@ static NSMutableDictionary *gExtensions = nil;
 
 + (void)addExtension:(NSString *)path init:(InitBlock)init
 {
+	[gExtensions[path] release];
 	gExtensions[path] = [init copy];
 }
 
@@ -212,11 +213,10 @@ static NSMutableDictionary *gExtensions = nil;
 	id init = gExtensions[path];
 	if (!init) return NO;
 
-	if (![init isEqual:[NSNull null]])
-	{
-		gExtensions[path] = [NSNull null];
-		((InitBlock) init)();
-	}
+	[gExtensions removeObjectForKey:path];
+
+	((InitBlock) init)();
+	[init release];
 	return YES;
 }
 
