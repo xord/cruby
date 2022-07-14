@@ -366,6 +366,7 @@ FILTERED_TARGETS.each do |os, sdk, archs|
           opts = %W[
             --prefix=#{ossl_install_dir}
             no-shared
+            no-tests
           ]
           sh %( #{envs} #{OSSL_CONFIGURE} #{opts.join ' '} #{sdk}-#{arch} )
           sh %( #{envs} make )
