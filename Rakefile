@@ -321,6 +321,12 @@ FILTERED_TARGETS.each do |os, sdk, archs|
             --without-fiddle
             --without-bigdecimal
           ]
+          opts.concat %w[
+            backtrace
+            syscall
+            __syscall
+            getentropy
+          ].map {|func| "ac_cv_func_#{func}=no"}
           opts << "--with-arch=#{arch}" unless arm
           opts << "--with-baseruby=#{BASE_RUBY}" if BASE_RUBY
           sh %( #{envs.join ' '} #{RUBY_CONFIGURE} #{opts.join ' '} )
@@ -329,22 +335,7 @@ FILTERED_TARGETS.each do |os, sdk, archs|
 
       file config_h => [makefile, config_h_dir] do
         src = Dir.glob("#{ruby_dir}/.ext/include/**/ruby/config.h").first
-        raise unless src
-
-        modify_file src do |s|
-          %w[
-            # avoid crash on AdMob initialization.
-            HAVE_BACKTRACE
-
-            # for app store review.
-            HAVE_SYSCALL
-            HAVE___SYSCALL
-            HAVE_GETENTROPY
-          ].each do |macro|
-            s = s.gsub /#define\s+#{macro}\s+1/, "#undef #{macro}"
-          end
-          s
-        end
+        raise 'no config.h' unless src
 
         sh %( cp #{src} #{config_h} )
       end
