@@ -154,6 +154,7 @@ directory OUTPUT_LIB_DIR
 end
 
 file RUBY_CONFIGURE do
+  # ignore some bundled_gems
   gems             = IGNORE_BUNDLED_GEMS
   bundled_gems     = "#{RUBY_DIR}/gems/bundled_gems"
   bundled_gem_dirs = gems.map {|gem| "#{RUBY_DIR}/.bundle/gems/#{gem}-*"}
@@ -162,6 +163,19 @@ file RUBY_CONFIGURE do
     s.gsub(/^\s*(#{gems.join '|'})\s+/) {"##{$1} "}
   end
   sh %( rm -rf #{bundled_gem_dirs.join ' '} )
+
+  # disable calling system()
+  modify_file "#{RUBY_DIR}/vm_dump.c" do |s|
+    s.gsub <<~FROM, <<~TO
+      int r = system(buf);
+    FROM
+      #if defined(HAVE_SYSTEM)
+        int r = system(buf);
+      #else
+        int r = -1;
+      #endif
+    TO
+  end
 end
 
 file OSSL_CUSTOM_CONF do
@@ -311,7 +325,7 @@ FILTERED_TARGETS.each do |os, sdk, archs|
         chdir ruby_dir do
           disables = %w[shared dln jit-support install-doc]
           withouts = %w[tcl tk fiddle bigdecimal]
-          nofuncs  = %w[backtrace syscall __syscall getentropy]
+          nofuncs  = %w[backtrace system syscall __syscall getentropy]
 
           envs = {
             'PATH'     => "#{cc_dir}:#{PATHS}",
