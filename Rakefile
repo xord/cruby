@@ -85,6 +85,8 @@ SYSTEM_RUBY_VER = RUBY_VERSION[/^(\d+\.\d+)\.\d+/, 1]
  EMBED_RUBY_VER = CRuby.ruby_version[0..1].join('.')
 BASE_RUBY       = SYSTEM_RUBY_VER != EMBED_RUBY_VER ? NATIVE_RUBY_BIN : nil
 
+IGNORE_BUNDLED_GEMS = %w[rbs debug]
+
 OUTPUT_XCFRAMEWORK_NAME       = "#{NAME}.xcframework"
 OUTPUT_XCFRAMEWORK_DIR        = "#{OUTPUT_DIR}/#{OUTPUT_XCFRAMEWORK_NAME}"
 OUTPUT_XCFRAMEWORK_INFO_PLIST = "#{OUTPUT_XCFRAMEWORK_DIR}/Info.plist"
@@ -149,6 +151,17 @@ directory OUTPUT_LIB_DIR
     sh %( tar xzf #{archive} -C #{dir} --strip=1 )
     sh %( touch #{configure} )
   end
+end
+
+file RUBY_CONFIGURE do
+  gems             = IGNORE_BUNDLED_GEMS
+  bundled_gems     = "#{RUBY_DIR}/gems/bundled_gems"
+  bundled_gem_dirs = gems.map {|gem| "#{RUBY_DIR}/.bundle/gems/#{gem}-*"}
+
+  modify_file bundled_gems do |line|
+    line =~ /^\s*(?:#{gems.join '|'})\s+/ ? "##{line}" : line
+  end
+  sh %( rm -rf #{bundled_gem_dirs.join ' '} )
 end
 
 file OSSL_CUSTOM_CONF do
