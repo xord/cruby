@@ -309,6 +309,10 @@ FILTERED_TARGETS.each do |os, sdk, archs|
       makefile_dep << BASE_RUBY if BASE_RUBY
       file makefile => makefile_dep do
         chdir ruby_dir do
+          disables = %w[shared dln jit-support install-doc]
+          withouts = %w[tcl tk fiddle bigdecimal]
+          nofuncs  = %w[backtrace syscall __syscall getentropy]
+
           envs = {
             'PATH'     => "#{cc_dir}:#{PATHS}",
             'CPP'      => "clang -arch #{arch} -E",
@@ -323,25 +327,15 @@ FILTERED_TARGETS.each do |os, sdk, archs|
           }.map {|k, v| "#{k}='#{v}'"}
           opts = %W[
             --host=#{host}
-            --disable-shared
-            --disable-dln
-            --disable-jit-support
-            --disable-install-doc
             --with-static-linked-ext
             --with-openssl-dir=#{ossl_install_dir}
-            --without-tcl
-            --without-tk
-            --without-fiddle
-            --without-bigdecimal
           ]
-          opts.concat %w[
-            backtrace
-            syscall
-            __syscall
-            getentropy
-          ].map {|func| "ac_cv_func_#{func}=no"}
+          opts += disables.map {|s| "--disable-#{s}"}
+          opts += withouts.map {|s| "--without-#{s}"}
+          opts += nofuncs .map {|s| "ac_cv_func_#{s}=no"} if ios
           opts << "--with-arch=#{arch}" unless arm
           opts << "--with-baseruby=#{BASE_RUBY}" if BASE_RUBY
+
           sh %( #{envs.join ' '} #{RUBY_CONFIGURE} #{opts.join ' '} )
 
           modify_file makefile do |s|
