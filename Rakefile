@@ -29,7 +29,7 @@ end
 
 def modify_file (path, &block)
   body     = read_file path
-  modified = body.lines.map {|line| block.call line.dup}.join
+  modified = block.call body.dup
   write_file path, modified if modified != body
 end
 
@@ -158,8 +158,8 @@ file RUBY_CONFIGURE do
   bundled_gems     = "#{RUBY_DIR}/gems/bundled_gems"
   bundled_gem_dirs = gems.map {|gem| "#{RUBY_DIR}/.bundle/gems/#{gem}-*"}
 
-  modify_file bundled_gems do |line|
-    line =~ /^\s*(?:#{gems.join '|'})\s+/ ? "##{line}" : line
+  modify_file bundled_gems do |s|
+    s.gsub(/^\s*(#{gems.join '|'})\s+/) {"##{$1} "}
   end
   sh %( rm -rf #{bundled_gem_dirs.join ' '} )
 end
@@ -344,9 +344,9 @@ FILTERED_TARGETS.each do |os, sdk, archs|
           opts << "--with-baseruby=#{BASE_RUBY}" if BASE_RUBY
           sh %( #{envs.join ' '} #{RUBY_CONFIGURE} #{opts.join ' '} )
 
-          modify_file makefile do |line|
+          modify_file makefile do |s|
             # avoid link error on linking exe/ruby
-            line =~ /^.*PROGRAM.*:.*exe\/.*PROGRAM.*$/ ? '' : line
+            s.gsub /^.*PROGRAM.*:.*exe\/.*PROGRAM.*$/, ''
           end
         end
       end
