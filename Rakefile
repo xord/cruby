@@ -29,7 +29,7 @@ end
 
 def modify_file (path, &block)
   body     = read_file path
-  modified = block.call body.dup
+  modified = body.lines.map {|line| block.call line.dup}.join
   write_file path, modified if modified != body
 end
 
@@ -330,6 +330,11 @@ FILTERED_TARGETS.each do |os, sdk, archs|
           opts << "--with-arch=#{arch}" unless arm
           opts << "--with-baseruby=#{BASE_RUBY}" if BASE_RUBY
           sh %( #{envs.join ' '} #{RUBY_CONFIGURE} #{opts.join ' '} )
+
+          modify_file makefile do |line|
+            # avoid link error on linking exe/ruby
+            line =~ /^.*PROGRAM.*:.*exe\/.*PROGRAM.*$/ ? '' : line
+          end
         end
       end
 
