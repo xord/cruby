@@ -14,12 +14,10 @@ jobs:
           sudo xcode-select -s '/Applications/Xcode_13.4.1.app/Contents/Developer'
           xcodebuild -version
 
-      - name: rustc
-        uses: actions-rs/toolchain@v1
-        with:
-            toolchain: stable
-            profile: minimal
-            override: true
+      - name: brew install
+        run: |
+          brew update
+          brew install rust
 
       - name: ruby 3.2
         uses: ruby/setup-ruby@v1
@@ -27,4 +25,4 @@ jobs:
           ruby-version: 3.2
 
       - name: build
-        run: rake build
+        run: rustc --version #rake build
