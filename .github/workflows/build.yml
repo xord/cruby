@@ -25,4 +25,4 @@ jobs:
           ruby-version: 3.2
 
       - name: build
-        run: rustc --version #rake build
+        run: rake build
