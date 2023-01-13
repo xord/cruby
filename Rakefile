@@ -347,7 +347,7 @@ TARGETS.each do |os, sdk, archs|
       makefile_dep << BASE_RUBY if BASE_RUBY
       file makefile => makefile_dep do
         chdir ruby_dir do
-          disables = %w[shared dln jit-support install-doc]
+          disables = %w[shared dln install-doc]
           withouts = %w[tcl tk fiddle bigdecimal]
           nofuncs  = %w[backtrace system syscall __syscall getentropy]
 
