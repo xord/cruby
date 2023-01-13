@@ -8,8 +8,8 @@ GITHUB_URL  = "https://github.com/xord/cruby"
 RUBY_URL    = 'https://cache.ruby-lang.org/pub/ruby/3.1/ruby-3.1.3.tar.gz'
 RUBY_SHA256 = '5ea498a35f4cd15875200a52dde42b6eb179e1264e17d78732c3a57cd1c6ab9e'
 
-OSSL_URL    = 'https://www.openssl.org/source/openssl-1.1.1s.tar.gz'
-OSSL_SHA256 = 'c5ac01e760ee6ff0dab61d6b2bbd30146724d063eb322180c6f18a6f74e4b6aa'
+OSSL_URL    = 'https://www.openssl.org/source/openssl-3.0.7.tar.gz'
+OSSL_SHA256 = '83049d042a260e696f62406ac5c08bf706fd84383f945cf21bd61e9ed95c396e'
 
 
 module CRuby
