@@ -16,7 +16,7 @@ jobs:
 
       - name: brew install
         run: |
-          brew update
+          #brew update
           brew install rust
 
       - name: ruby 3.2
