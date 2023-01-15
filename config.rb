@@ -1,7 +1,7 @@
 # -*- mode: ruby; coding: utf-8 -*-
 
 
-POD_VERSION = 0
+POD_VERSION = 1
 
 GITHUB_URL  = "https://github.com/xord/cruby"
 
