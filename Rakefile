@@ -164,6 +164,30 @@ file RUBY_CONFIGURE do
   end
   sh %( rm -rf #{bundled_gem_dirs.join ' '} )
 
+  # append 'CRuby_init()' func to ruby.c
+  modify_file "#{RUBY_DIR}/ruby.c" do |s|
+    s + <<~EOS
+      void CRuby_init ()
+      {
+        void Init_prelude();
+
+        ruby_init();
+
+        Init_enc();
+        Init_ext();
+        Init_prelude();
+        Init_builtin_features();
+
+        ruby_cmdline_options_t opts;
+        Init_ruby_description(cmdline_options_init(&opts));
+
+        #if RUBY_API_VERSION_MAJOR >= 3
+          rb_call_builtin_inits();
+        #endif
+      }
+    EOS
+  end
+
   # disable calling system()
   modify_file "#{RUBY_DIR}/vm_dump.c" do |s|
     s.gsub <<~FROM, <<~TO
