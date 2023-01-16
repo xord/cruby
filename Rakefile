@@ -167,15 +167,13 @@ file RUBY_CONFIGURE do
   # append 'CRuby_init()' func to ruby.c
   modify_file "#{RUBY_DIR}/ruby.c" do |s|
     s + <<~EOS
-      void CRuby_init ()
+      void CRuby_init (void (*init_prelude)())
       {
-        void Init_prelude();
-
         ruby_init();
 
         Init_enc();
         Init_ext();
-        Init_prelude();
+        init_prelude();
         Init_builtin_features();
 
         ruby_cmdline_options_t opts;
