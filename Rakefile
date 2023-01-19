@@ -283,16 +283,14 @@ FILTERED_TARGETS.each do |os, sdk, archs|
   output_lib_file = "#{output_dir}/#{output_lib_name}"
 
   archs.each do |arch|
-    build_arch_dir = "#{build_dir}/#{arch}"
-    ruby_dir       = "#{build_arch_dir}/ruby"
-    ossl_dir       = "#{build_arch_dir}/openssl"
-
+    build_arch_dir   = "#{build_dir}/#{arch}"
+    ruby_dir         = "#{build_arch_dir}/ruby"
+    ossl_dir         = "#{build_arch_dir}/openssl"
     ossl_install_dir = "#{build_arch_dir}/openssl-install"
-    ossl_config_h    = "#{ossl_install_dir}/include/openssl/opensslconf.h"
 
     libruby_ver = ruby25_or_higher? ? ".#{CRuby.ruby_version[0, 2].join '.'}" : ""
     libruby     = "#{ruby_dir}/libruby#{libruby_ver}-static.a"
-    libossl     = "#{ossl_dir}/libssl.a"
+    libossl     = "#{ossl_install_dir}/lib/libssl.a"
 
     rbconfig_rb     = "#{OUTPUT_LIB_DIR}/rbconfig-#{sdk}-#{arch}.rb"
     rbconfig_rb_dir = File.dirname rbconfig_rb
@@ -341,7 +339,7 @@ FILTERED_TARGETS.each do |os, sdk, archs|
         flags           += " -I#{ruby_inc_dir}"
       end
 
-      makefile_dep = [RUBY_CONFIGURE, ruby_dir, ossl_config_h, *missing_headers]
+      makefile_dep = [RUBY_CONFIGURE, ruby_dir, libossl, *missing_headers]
       makefile_dep << BASE_RUBY if BASE_RUBY
       file makefile => makefile_dep do
         chdir ruby_dir do
@@ -350,17 +348,17 @@ FILTERED_TARGETS.each do |os, sdk, archs|
           nofuncs  = %w[backtrace system syscall __syscall getentropy]
 
           envs = {
-            'PATH'     => "#{cc_dir}:#{PATHS}",
-            'CPP'      => "clang -arch #{arch} -E",
-            'CC'       => "clang -arch #{arch}",
-            'CXXCPP'   => "clang++ -arch #{arch} -E",
-            'CXX'      => "clang++ -arch #{arch}",
-            'CPPFLAGS' => "#{flags}",
-            'CFLAGS'   => "#{flags} -fvisibility=hidden",
-            'CXXFLAGS' => "-fvisibility-inline-hidden",
-            'ASFLAGS'  => "#{isysroot}",
-            'LDFLAGS'  => "#{flags} -L#{sdk_root}/usr/lib -lSystem"
-          }.map {|k, v| "#{k}='#{v}'"}
+            PATH:     "#{cc_dir}:#{PATHS}",
+            CPP:      "clang -E",
+            CC:       "clang",
+            CXXCPP:   "clang++ -E",
+            CXX:      "clang++",
+            CPPFLAGS: "#{flags}",
+            CFLAGS:   "#{flags} -arch #{arch} -fvisibility=hidden",
+            CXXFLAGS: "-fvisibility-inline-hidden",
+            ASFLAGS:  "#{isysroot}",
+            LDFLAGS:  "#{flags} -L#{sdk_root}/usr/lib -lSystem"
+          }.map {|k, v| "#{k}='#{v}'"}.join ' '
           opts = %W[
             --host=#{host}
             --with-static-linked-ext
@@ -372,7 +370,7 @@ FILTERED_TARGETS.each do |os, sdk, archs|
           opts << "--with-arch=#{arch}" unless arm
           opts << "--with-baseruby=#{BASE_RUBY}" if BASE_RUBY
 
-          sh %( #{envs.join ' '} #{RUBY_CONFIGURE} #{opts.join ' '} )
+          sh %( #{envs} #{RUBY_CONFIGURE} #{opts.join ' '} )
 
           modify_file makefile do |s|
             # avoid link error on linking exe/ruby
@@ -401,19 +399,16 @@ FILTERED_TARGETS.each do |os, sdk, archs|
 
       file libossl => [OSSL_CONFIGURE, OSSL_CUSTOM_CONF, ossl_dir] do
         chdir ossl_dir do
-          envs = "CROSS_COMPILE=#{cc_dir}/"
+          envs = {
+            CROSS_COMPILE: "#{cc_dir}/"
+          }.map {|k, v| "#{k}='#{v}'"}.join ' '
           opts = %W[
             --prefix=#{ossl_install_dir}
             no-shared
             no-tests
-          ]
-          sh %( #{envs} #{OSSL_CONFIGURE} #{opts.join ' '} #{sdk}-#{arch} )
+          ].join ' '
+          sh %( #{envs} #{OSSL_CONFIGURE} #{opts} #{sdk}-#{arch} )
           sh %( #{envs} make -s )
-        end
-      end
-
-      file ossl_config_h => [libossl, ossl_install_dir] do
-        chdir ossl_dir do
           sh %( make install_sw | grep include )
         end
       end
@@ -484,14 +479,16 @@ namespace :native do
         'with-openssl-dir' => ossl_install_dir
       }.map {|k, v| "--#{k}=#{v}"}
       sh %( #{RUBY_CONFIGURE} #{opts.join ' '} --disable-install-doc )
-      sh %( make -s && make -s install )
+      sh %( make -s )
+      sh %( make -s install )
     end
   end
 
   file ossl_lib => [OSSL_CONFIGURE, ossl_dir] do
     chdir ossl_dir do
       sh %( #{OSSL_DIR}/config --prefix=#{ossl_install_dir} )
-      sh %( make -s && make -s install_sw )
+      sh %( make -s )
+      sh %( make -s install_sw )
     end
   end
 end# native
