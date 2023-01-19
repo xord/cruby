@@ -3,6 +3,7 @@
 
 /.ruby
 /.openssl
+/.libyaml
 /.build
 /.headers
 /CRuby

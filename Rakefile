@@ -67,12 +67,14 @@ ROOT_DIR   = __dir__
 INC_DIR    = "#{ROOT_DIR}/include"
 RUBY_DIR   = "#{ROOT_DIR}/.ruby"
 OSSL_DIR   = "#{ROOT_DIR}/.openssl"
+YAML_DIR   = "#{ROOT_DIR}/.libyaml"
 BUILD_DIR  = "#{ROOT_DIR}/.build"
 OUTPUT_DIR = "#{ROOT_DIR}/#{NAME}"
 
 RUBY_CONFIGURE   = "#{RUBY_DIR}/configure"
 OSSL_CONFIGURE   = "#{OSSL_DIR}/Configure"
 OSSL_CUSTOM_CONF = "#{OSSL_DIR}/Configurations/999-custom.conf"
+YAML_CONFIGURE   = "#{YAML_DIR}/configure"
 
 HEADERS_PATCH         = "#{ROOT_DIR}/headers.patch"
 HEADERS_PATCH_DEV_DIR = "#{ROOT_DIR}/.headers"
@@ -133,7 +135,8 @@ directory OUTPUT_LIB_DIR
 
 [
   [RUBY_DIR, RUBY_URL, RUBY_CONFIGURE],
-  [OSSL_DIR, OSSL_URL, OSSL_CONFIGURE]
+  [OSSL_DIR, OSSL_URL, OSSL_CONFIGURE],
+  [YAML_DIR, YAML_URL, YAML_CONFIGURE]
 ].each do |dir, url, configure|
   archive = "#{ROOT_DIR}/#{File.basename url}"
 
@@ -286,25 +289,28 @@ FILTERED_TARGETS.each do |os, sdk, archs|
     build_arch_dir   = "#{build_dir}/#{arch}"
     ruby_dir         = "#{build_arch_dir}/ruby"
     ossl_dir         = "#{build_arch_dir}/openssl"
+    yaml_dir         = "#{build_arch_dir}/libyaml"
     ossl_install_dir = "#{build_arch_dir}/openssl-install"
+    yaml_install_dir = "#{build_arch_dir}/libyaml-install"
 
     libruby_ver = ruby25_or_higher? ? ".#{CRuby.ruby_version[0, 2].join '.'}" : ""
     libruby     = "#{ruby_dir}/libruby#{libruby_ver}-static.a"
     libossl     = "#{ossl_install_dir}/lib/libssl.a"
+    libyaml     = "#{yaml_install_dir}/lib/libyaml.a"
 
     rbconfig_rb     = "#{OUTPUT_LIB_DIR}/rbconfig-#{sdk}-#{arch}.rb"
     rbconfig_rb_dir = File.dirname rbconfig_rb
 
     arch_lib_file = "#{build_arch_dir}/#{output_lib_name}"
 
-    ios = os == :ios
-    arm = arch =~ /^arm/
+    ios  = os == :ios
+    arm  = arch =~ /^arm/
+    host = "#{arm ? 'arm' : arch}-#{ios ? 'iphone' : 'apple'}-darwin"
 
     namespace :ruby do
       config_h     = "#{OUTPUT_INC_DIR}/ruby/config-#{sdk}-#{arch}.h"
       config_h_dir = File.dirname config_h
       makefile     = "#{ruby_dir}/Makefile"
-      host         = "#{arm ? 'arm' : arch}-#{ios ? 'iphone' : 'apple'}-darwin"
       isysroot     = "-isysroot #{sdk_root}"
       flags        = "-pipe -Os #{isysroot}" # -gdwarf-2 -no-cpp-precomp -mthumb
 
@@ -339,7 +345,7 @@ FILTERED_TARGETS.each do |os, sdk, archs|
         flags           += " -I#{ruby_inc_dir}"
       end
 
-      makefile_dep = [RUBY_CONFIGURE, ruby_dir, libossl, *missing_headers]
+      makefile_dep = [RUBY_CONFIGURE, ruby_dir, libossl, libyaml, *missing_headers]
       makefile_dep << BASE_RUBY if BASE_RUBY
       file makefile => makefile_dep do
         chdir ruby_dir do
@@ -363,6 +369,7 @@ FILTERED_TARGETS.each do |os, sdk, archs|
             --host=#{host}
             --with-static-linked-ext
             --with-openssl-dir=#{ossl_install_dir}
+            --with-libyaml-dir=#{yaml_install_dir}
           ]
           opts += disables.map {|s| "--disable-#{s}"}
           opts += withouts.map {|s| "--without-#{s}"}
@@ -413,6 +420,31 @@ FILTERED_TARGETS.each do |os, sdk, archs|
         end
       end
     end# openssl
+
+    namespace :libyaml do
+      directory yaml_dir
+      directory yaml_install_dir
+
+      file libyaml => [YAML_CONFIGURE, yaml_dir] do
+        chdir yaml_dir do
+          xcruns = %w[
+            cc ld ar ranlib
+          ].map {|cmd| "#{cmd.upcase}='xcrun --sdk #{sdk} #{cmd}'"}.join ' '
+          envs   = {
+            CFLAGS: "-arch #{arch}"
+          }.map {|k, v| "#{k}='#{v}'"}.join ' '
+          opts   = %W[
+            --prefix=#{yaml_install_dir}
+            --host=#{host}
+            --enable-static
+            --disable-shared
+          ].join ' '
+          sh %( #{xcruns} #{envs} #{YAML_CONFIGURE} #{opts} )
+          sh %( #{xcruns} #{envs} make -j -s )
+          sh %( make install )
+        end
+      end
+    end# libyaml
 
     directory rbconfig_rb_dir
 
