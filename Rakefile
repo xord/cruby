@@ -388,7 +388,7 @@ FILTERED_TARGETS.each do |os, sdk, archs|
 
       file libruby => [makefile, config_h] do
         chdir ruby_dir do
-          sh %( make -s )
+          sh %( make -j -s )
         end
       end
     end# ruby
@@ -408,7 +408,7 @@ FILTERED_TARGETS.each do |os, sdk, archs|
             no-tests
           ].join ' '
           sh %( #{envs} #{OSSL_CONFIGURE} #{opts} #{sdk}-#{arch} )
-          sh %( #{envs} make -s )
+          sh %( #{envs} make -j -s )
           sh %( make install_sw | grep include )
         end
       end
@@ -479,7 +479,7 @@ namespace :native do
         'with-openssl-dir' => ossl_install_dir
       }.map {|k, v| "--#{k}=#{v}"}
       sh %( #{RUBY_CONFIGURE} #{opts.join ' '} --disable-install-doc )
-      sh %( make -s )
+      sh %( make -j -s )
       sh %( make -s install )
     end
   end
@@ -487,7 +487,7 @@ namespace :native do
   file ossl_lib => [OSSL_CONFIGURE, ossl_dir] do
     chdir ossl_dir do
       sh %( #{OSSL_DIR}/config --prefix=#{ossl_install_dir} )
-      sh %( make -s )
+      sh %( make -j -s )
       sh %( make -s install_sw )
     end
   end
