@@ -427,20 +427,22 @@ FILTERED_TARGETS.each do |os, sdk, archs|
 
       file libyaml => [YAML_CONFIGURE, yaml_dir] do
         chdir yaml_dir do
-          xcruns = %w[
-            cc ld ar ranlib
-          ].map {|cmd| "#{cmd.upcase}='xcrun --sdk #{sdk} #{cmd}'"}.join ' '
-          envs   = {
+          envs = {
+            CC:     "xcrun --sdk #{sdk} cc",
+            CPP:    "xcrun --sdk #{sdk} cc -E",
+            LD:     "xcrun --sdk #{sdk} ld",
+            AR:     "xcrun --sdk #{sdk} ar",
+            RANLIB: "xcrun --sdk #{sdk} ranlib",
             CFLAGS: "-arch #{arch}"
           }.map {|k, v| "#{k}='#{v}'"}.join ' '
-          opts   = %W[
+          opts = %W[
             --prefix=#{yaml_install_dir}
             --host=#{host}
             --enable-static
             --disable-shared
           ].join ' '
-          sh %( #{xcruns} #{envs} #{YAML_CONFIGURE} #{opts} )
-          sh %( #{xcruns} #{envs} make -j -s )
+          sh %( #{envs} #{YAML_CONFIGURE} #{opts} )
+          sh %( #{envs} make -j -s )
           sh %( make install )
         end
       end
