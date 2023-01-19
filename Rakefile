@@ -355,12 +355,12 @@ FILTERED_TARGETS.each do |os, sdk, archs|
 
           envs = {
             PATH:     "#{cc_dir}:#{PATHS}",
-            CPP:      "clang -E",
-            CC:       "clang",
-            CXXCPP:   "clang++ -E",
-            CXX:      "clang++",
+            CPP:      "clang -arch #{arch} -E",
+            CC:       "clang -arch #{arch}",
+            CXXCPP:   "clang++ -arch #{arch} -E",
+            CXX:      "clang++ -arch #{arch}",
             CPPFLAGS: "#{flags}",
-            CFLAGS:   "#{flags} -arch #{arch} -fvisibility=hidden",
+            CFLAGS:   "#{flags} -fvisibility=hidden",
             CXXFLAGS: "-fvisibility-inline-hidden",
             ASFLAGS:  "#{isysroot}",
             LDFLAGS:  "#{flags} -L#{sdk_root}/usr/lib -lSystem"
