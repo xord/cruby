@@ -25,7 +25,7 @@ jobs:
       - name: version
         id: version
         run: |
-          echo ::set-output name=value::$(ruby -e 'print "${{ github.ref }}"[/\/v([\w\.\-]+)/, 1]')
+          echo value=$(ruby -e 'print "${{ github.ref }}"[/\/v([\w\.\-]+)/, 1]') >> $GITHUB_OUTPUT
 
       - name: archive
         run: rake clean archive
