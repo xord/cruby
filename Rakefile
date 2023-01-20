@@ -452,12 +452,12 @@ FILTERED_TARGETS.each do |os, sdk, archs|
       sh %( cp "#{ruby_dir}/rbconfig.rb" #{rbconfig_rb} )
     end
 
-    file arch_lib_file => [libruby, libossl] do
+    file arch_lib_file => [libruby, libossl, libyaml] do
       extract_dir = "#{build_arch_dir}/.#{File.basename arch_lib_file}"
-      excludes    = %w[dmyenc.o dmyext.o /openssl/apps/ /openssl/test/]
+      excludes    = %w[dmyenc.o dmyext.o]
       extra_objs  = %w[enc ext].map {|s| "#{ruby_dir}/#{s}/#{s}init.o"}
 
-      [ruby_dir, ossl_dir]
+      [ruby_dir, ossl_install_dir, yaml_install_dir]
         .map {|dir| Dir.glob "#{dir}/**/*.a"}
         .flatten
         .reject {|path| excludes.any? {|s| path.include? s}}
