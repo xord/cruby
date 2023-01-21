@@ -428,10 +428,7 @@ FILTERED_TARGETS.each do |os, sdk, archs|
       file libyaml => [YAML_CONFIGURE, yaml_dir] do
         chdir yaml_dir do
           envs = {
-            CC:     "xcrun --sdk #{sdk} cc -arch #{arch}",
-            LD:     "xcrun --sdk #{sdk} ld",
-            AR:     "xcrun --sdk #{sdk} ar",
-            RANLIB: "xcrun --sdk #{sdk} ranlib"
+            CC: "xcrun --sdk #{sdk} cc -arch #{arch}"
           }.map {|k, v| "#{k}='#{v}'"}.join ' '
           opts = %W[
             --prefix=#{yaml_install_dir}
