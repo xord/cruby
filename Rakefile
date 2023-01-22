@@ -61,7 +61,11 @@ TARGETS = [
   [:macos, :macosx,          [:arm64, :x86_64]],
   [:ios,   :iphonesimulator, [:arm64, :x86_64]],
   [:ios,   :iphoneos,        [:arm64]]
-]
+].each {|os, sdk, archs|
+  archs.reject! {|arch|
+    BUILD_TARGETS && !BUILD_TARGETS.include?("#{sdk}:#{arch}")
+  }
+}.reject {|os, sdk, archs| BUILD_OS && os.to_s != BUILD_OS || archs.empty?}
 
 ROOT_DIR   = __dir__
 INC_DIR    = "#{ROOT_DIR}/include"
@@ -105,12 +109,6 @@ PREBUILT_ARCHIVE = "downloaded_#{OUTPUT_ARCHIVE}"
 
 PATHS = ENV['PATH']
 ENV['ac_cv_func_setpgrp_void'] = 'yes'
-
-FILTERED_TARGETS = TARGETS.each {|os, sdk, archs|
-  archs.reject! {|arch|
-    BUILD_TARGETS && !BUILD_TARGETS.include?("#{sdk}:#{arch}")
-  }
-}.reject {|os, sdk, archs| BUILD_OS && os.to_s != BUILD_OS || archs.empty?}
 
 
 task :default => :build
@@ -276,7 +274,7 @@ file PREBUILT_ARCHIVE do
 end
 
 
-FILTERED_TARGETS.each do |os, sdk, archs|
+TARGETS.each do |os, sdk, archs|
   sdk_root = xcrun sdk, '--show-sdk-path'
   cc_dir   = File.dirname xcrun(sdk, '--find cc')
 
