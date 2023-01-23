@@ -184,21 +184,34 @@ file RUBY_CONFIGURE do
   # append 'CRuby_init()' func to ruby.c
   modify_file "#{RUBY_DIR}/ruby.c" do |s|
     s + <<~EOS
-      void CRuby_init (void (*init_prelude)())
+      void CRuby_init (void (*init_prelude)(), bool yjit)
       {
         ruby_init();
 
+        ruby_cmdline_options_t opt;
+        cmdline_options_init(&opt);
+
+        #if USE_YJIT
+          FEATURE_SET(opt.features, FEATURE_BIT(yjit));
+          setup_yjit_options("");
+          opt.yjit = yjit;
+        #endif
+
+        Init_ruby_description(&opt);
         Init_enc();
         Init_ext();
+        Init_extra_exts();
         init_prelude();
-        Init_builtin_features();
-
-        ruby_cmdline_options_t opts;
-        Init_ruby_description(cmdline_options_init(&opts));
-
         #if RUBY_API_VERSION_MAJOR >= 3
           rb_call_builtin_inits();
         #endif
+        Init_builtin_features();
+
+        #if USE_YJIT
+          if (opt.yjit) rb_yjit_init();
+        #endif
+
+        rb_jit_cont_init();
       }
     EOS
   end

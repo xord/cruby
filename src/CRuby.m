@@ -42,9 +42,9 @@ static NSMutableDictionary *gExtensions = nil;
 
 	gExtensions = [[NSMutableDictionary alloc] init];
 
-	void CRuby_init(void (*init_prelude)());
+	void CRuby_init(void (*)(), bool);
 	void Init_prelude();
-	CRuby_init(Init_prelude);
+	CRuby_init(Init_prelude, true);
 
 	[self addLibrary:@"CRuby" bundle:[NSBundle bundleForClass:CRuby.class]];
 
