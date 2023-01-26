@@ -402,10 +402,10 @@ TARGETS.each do |os, sdk, archs|
           yjit         = rustc_target != nil
           flags       += ' -DYJIT_STATS=1' if yjit && YJIT_STATS
 
-          enables      = yjit ? %w[jit-support yjit] : []
-          disables     = %w[shared dln install-doc]
-          withouts     = %w[tcl tk fiddle bigdecimal]
-          nofuncs      = %w[backtrace system syscall __syscall getentropy]
+          enables  = yjit ? %w[jit-support yjit] : []
+          disables = %w[shared dln install-doc]
+          withouts = %w[tcl tk fiddle bigdecimal]
+          nofuncs  = %w[backtrace system syscall __syscall getentropy]
 
           envs = {
             PATH:     "#{cc_dir}:#{PATHS}",
