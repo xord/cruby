@@ -17,7 +17,8 @@ typedef void (^RescueBlock) (CRBValue *exception);
 + (CRBValue *)evaluate:(NSString *)string rescue:(RescueBlock)rescue;
 
 + (void)addLibrary:(NSString *)name bundle:(NSBundle *)bundle;
-
 + (void)addExtension:(NSString *)path init:(void(^)())init;
+
++ (void)enableYJIT;
 
 @end
