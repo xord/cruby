@@ -34,7 +34,14 @@ typedef void (^InitBlock) ();
 
 static NSMutableDictionary *gExtensions = nil;
 
-+ (void)initialize
+static BOOL gYJIT = NO;
+
++ (void)finalize
+{
+	ruby_finalize();
+}
+
++ (void)setupCRuby
 {
 	static BOOL done = NO;
 	if (done) return;
@@ -42,9 +49,9 @@ static NSMutableDictionary *gExtensions = nil;
 
 	gExtensions = [[NSMutableDictionary alloc] init];
 
-	void CRuby_init(void (*init_prelude)());
+	void CRuby_init(void (*)(), bool);
 	void Init_prelude();
-	CRuby_init(Init_prelude);
+	CRuby_init(Init_prelude, gYJIT);
 
 	[self addLibrary:@"CRuby" bundle:[NSBundle bundleForClass:CRuby.class]];
 
@@ -81,11 +88,6 @@ static NSMutableDictionary *gExtensions = nil;
 #else
 	return @"nil";
 #endif
-}
-
-+ (void)finalize
-{
-	ruby_finalize();
 }
 
 + (BOOL)start:(NSString *)filename
@@ -154,6 +156,8 @@ static NSMutableDictionary *gExtensions = nil;
 
 + (CRBValue *)eval:(NSString *)string rescue:(RescueBlock)rescue
 {
+	[self setupCRuby];
+
 	int state = 0;
 	VALUE ret = rb_eval_string_protect(string.UTF8String, &state);
 
@@ -204,6 +208,12 @@ static NSMutableDictionary *gExtensions = nil;
 	((InitBlock) init)();
 	[init release];
 	return YES;
+}
+
++ (void)enableYJIT
+{
+	// must be called before first 'eval' call
+	gYJIT = YES;
 }
 
 @end

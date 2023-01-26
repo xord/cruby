@@ -18,6 +18,10 @@ BUILD_TARGETS = (ENV['targets'] || ENV['target'])&.split(/[ ,]+/)
 #   => do not download prebuild archive.
 NO_PREBUILT   = (ENV['noprebuilt'] || 0).to_i != 0
 
+# $ rake build yjit_stats=1
+#   => same as passing '--yjit-stats' option to 'ruby' command
+YJIT_STATS   = (ENV['yjit_stats'] || 0).to_i != 0
+
 
 def read_file (path)
   open(path) {|f| f.read}
@@ -52,6 +56,22 @@ end
 
 def ruby25_or_higher? ()
   version_string(*CRuby.ruby_version) >= version_string(2, 5)
+end
+
+def to_rust_target (os, sdk, arch)
+  arch = arch.to_s.sub /^arm/, 'aarch'
+  os   = {
+    macosx:          'darwin',
+    iphonesimulator: 'ios-sim',
+    iphoneos:        'ios'
+  }[sdk.to_sym] or raise 'unknown sdk'
+
+  installed_rust_targets.find {|target| target == "#{arch}-apple-#{os}"}
+end
+
+def installed_rust_targets ()
+  @installed_rust_targets ||=
+    (`rustup target list --installed 2>/dev/null` rescue "").lines chomp: true
 end
 
 
@@ -168,21 +188,34 @@ file RUBY_CONFIGURE do
   # append 'CRuby_init()' func to ruby.c
   modify_file "#{RUBY_DIR}/ruby.c" do |s|
     s + <<~EOS
-      void CRuby_init (void (*init_prelude)())
+      void CRuby_init (void (*init_prelude)(), bool yjit)
       {
         ruby_init();
 
+        ruby_cmdline_options_t opt;
+        cmdline_options_init(&opt);
+
+        #if USE_YJIT
+          FEATURE_SET(opt.features, FEATURE_BIT(yjit));
+          setup_yjit_options("#{YJIT_STATS ? 'stats' : ''}");
+          opt.yjit = yjit;
+        #endif
+
+        Init_ruby_description(&opt);
         Init_enc();
         Init_ext();
+        Init_extra_exts();
         init_prelude();
-        Init_builtin_features();
-
-        ruby_cmdline_options_t opts;
-        Init_ruby_description(cmdline_options_init(&opts));
-
         #if RUBY_API_VERSION_MAJOR >= 3
           rb_call_builtin_inits();
         #endif
+        Init_builtin_features();
+
+        #if USE_YJIT
+          if (opt.yjit) rb_yjit_init();
+        #endif
+
+        rb_jit_cont_init();
       }
     EOS
   end
@@ -196,6 +229,24 @@ file RUBY_CONFIGURE do
         int r = system(buf);
       #else
         int r = -1;
+      #endif
+    TO
+  end
+
+  # use sys_icache_invalidate() on iphoneos
+  modify_file "#{RUBY_DIR}/yjit.c" do |s|
+    <<~HEADER + s.gsub(<<~FROM, <<~TO)
+      #include <TargetConditionals.h>
+      #if TARGET_OS_IOS && !TARGET_OS_SIMULATOR
+      #include <libkern/OSCacheControl.h>
+      #endif
+    HEADER
+      __builtin___clear_cache(start, end);
+    FROM
+      #if TARGET_OS_IOS && !TARGET_OS_SIMULATOR
+        sys_icache_invalidate(start, (size_t) ((char*) end - (char*) start));
+      #else
+        __builtin___clear_cache(start, end);
       #endif
     TO
   end
@@ -347,7 +398,12 @@ TARGETS.each do |os, sdk, archs|
       makefile_dep << BASE_RUBY if BASE_RUBY
       file makefile => makefile_dep do
         chdir ruby_dir do
-          disables = %w[shared dln jit-support install-doc]
+          rustc_target = to_rust_target os, sdk, arch
+          yjit         = rustc_target != nil
+          flags       += ' -DYJIT_STATS=1' if yjit && YJIT_STATS
+
+          enables  = yjit ? %w[jit-support yjit] : []
+          disables = %w[shared dln install-doc]
           withouts = %w[tcl tk fiddle bigdecimal]
           nofuncs  = %w[backtrace system syscall __syscall getentropy]
 
@@ -361,14 +417,16 @@ TARGETS.each do |os, sdk, archs|
             CFLAGS:   "#{flags} -fvisibility=hidden",
             CXXFLAGS: "-fvisibility-inline-hidden",
             ASFLAGS:  "#{isysroot}",
-            LDFLAGS:  "#{flags} -L#{sdk_root}/usr/lib -lSystem"
-          }.map {|k, v| "#{k}='#{v}'"}.join ' '
+            LDFLAGS:  "#{flags} -L#{sdk_root}/usr/lib -lSystem -framework Security",
+            RUSTC:    rustc_target&.then {|t| "rustc --target=#{t}"}
+          }.compact.map {|k, v| "#{k}='#{v}'"}.join ' '
           opts = %W[
             --host=#{host}
             --with-static-linked-ext
             --with-openssl-dir=#{ossl_install_dir}
             --with-libyaml-dir=#{yaml_install_dir}
           ]
+          opts += enables.map  {|s| "--enable-#{s}"}
           opts += disables.map {|s| "--disable-#{s}"}
           opts += withouts.map {|s| "--without-#{s}"}
           opts += nofuncs .map {|s| "ac_cv_func_#{s}=no"} if ios
@@ -379,7 +437,9 @@ TARGETS.each do |os, sdk, archs|
 
           modify_file makefile do |s|
             # avoid link error on linking exe/ruby
-            s.gsub /^.*PROGRAM.*:.*exe\/.*PROGRAM.*$/, ''
+            s = s.gsub /^.*PROGRAM.*:.*exe\/.*PROGRAM.*$/, ''
+            s += "$(LIBRUBY_A): $(YJIT_LIBS)" if yjit
+            s
           end
         end
       end

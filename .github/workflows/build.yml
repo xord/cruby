@@ -20,6 +20,18 @@ jobs:
         with:
           ruby-version: 3.2
 
+      - name: setup rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile:   minimal
+          toolchain: stable
+          default:   true
+          override:  true
+
+      - name: setup rust targets
+        run: |
+          rustup target list | grep apple | grep -v '(installed)' | xargs rustup target add
+
       - name: build
         run: rake build
 
