@@ -7,7 +7,8 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - name: checkout
+        uses: actions/checkout@v2
 
       - name: xcode
         run: |
@@ -21,3 +22,8 @@ jobs:
 
       - name: build
         run: rake build
+
+      - name: check outputs
+        run: |
+          find CRuby/ -iname '*.a' | xargs ls -lh
+          find CRuby/ -iname '*.a' | xargs lipo -info

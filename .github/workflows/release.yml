@@ -27,8 +27,20 @@ jobs:
         run: |
           echo value=$(ruby -e 'print "${{ github.ref }}"[/\/v([\w\.\-]+)/, 1]') >> $GITHUB_OUTPUT
 
+      - name: build
+        run: rake build
+
+      - name: check outputs
+        run: |
+          find CRuby/ -iname '*.a' | xargs ls -lh
+          find CRuby/ -iname '*.a' | xargs lipo -info
+
       - name: archive
-        run: rake clean archive
+        run: rake archive
+
+      - name: check archive
+        run: |
+          find . -iname 'CRuby_prebuilt*.tar.gz' | xargs ls -lh
 
       - name: create release
         id: create_release
