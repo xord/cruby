@@ -18,6 +18,10 @@ BUILD_TARGETS = (ENV['targets'] || ENV['target'])&.split(/[ ,]+/)
 #   => do not download prebuild archive.
 NO_PREBUILT   = (ENV['noprebuilt'] || 0).to_i != 0
 
+# $ rake build yjit_stats=1
+#   => same as passing '--yjit-stats' option to 'ruby' command
+YJIT_STATS   = (ENV['yjit_stats'] || 0).to_i != 0
+
 
 def read_file (path)
   open(path) {|f| f.read}
@@ -193,7 +197,7 @@ file RUBY_CONFIGURE do
 
         #if USE_YJIT
           FEATURE_SET(opt.features, FEATURE_BIT(yjit));
-          setup_yjit_options("");
+          setup_yjit_options("#{YJIT_STATS ? 'stats' : ''}");
           opt.yjit = yjit;
         #endif
 
@@ -396,6 +400,7 @@ TARGETS.each do |os, sdk, archs|
         chdir ruby_dir do
           rustc_target = to_rust_target os, sdk, arch
           yjit         = rustc_target != nil
+          flags       += ' -DYJIT_STATS=1' if yjit && YJIT_STATS
 
           enables      = yjit ? %w[jit-support yjit] : []
           disables     = %w[shared dln install-doc]
