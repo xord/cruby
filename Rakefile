@@ -78,8 +78,8 @@ end
 NAME = "CRuby"
 
 TARGETS = [
-  #[:macos, :macosx,          [:arm64, :x86_64]],
-  #[:ios,   :iphonesimulator, [:arm64, :x86_64]],
+  [:macos, :macosx,          [:arm64, :x86_64]],
+  [:ios,   :iphonesimulator, [:arm64, :x86_64]],
   [:ios,   :iphoneos,        [:arm64]]
 ].each {|os, sdk, archs|
   archs.reject! {|arch|
@@ -434,7 +434,6 @@ TARGETS.each do |os, sdk, archs|
           opts << "--with-baseruby=#{BASE_RUBY}" if BASE_RUBY
 
           sh %( #{envs} #{RUBY_CONFIGURE} #{opts.join ' '} )
-          sh %( find . -iname 'config*.h' | xargs ruby -e 'ARGV.each {|s| puts s; puts File.read(s).lines.select {|l| l =~ /yjit/i}}' )
 
           modify_file makefile do |s|
             # avoid link error on linking exe/ruby
@@ -544,6 +543,7 @@ TARGETS.each do |os, sdk, archs|
     file output_lib_file => output_dir do |t|
       libs = t.prerequisites.select {|s| s.end_with? '.a'}
       sh %( lipo -create #{libs.join ' '} -output #{output_lib_file} )
+      sh %( find . -iname 'config*.h' | xargs ruby -e 'ARGV.each {|s| puts s; puts File.read(s).lines.select {|l| l =~ /yjit/i}}' )
     end
 
     file OUTPUT_XCFRAMEWORK_INFO_PLIST => output_lib_file
