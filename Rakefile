@@ -434,7 +434,7 @@ TARGETS.each do |os, sdk, archs|
           opts << "--with-baseruby=#{BASE_RUBY}" if BASE_RUBY
 
           sh %( #{envs} #{RUBY_CONFIGURE} #{opts.join ' '} )
-          sh %( find . -iname 'config-*.h' | xargs ruby -e 'ARGV.each {|s| puts s; puts File.read(s).lines.select {|l| l =~ /yjit/i}}' )
+          sh %( find . -iname 'config*.h' | xargs ruby -e 'ARGV.each {|s| puts s; puts File.read(s).lines.select {|l| l =~ /yjit/i}}' )
 
           modify_file makefile do |s|
             # avoid link error on linking exe/ruby
