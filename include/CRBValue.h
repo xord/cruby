@@ -7,7 +7,11 @@
 
 @property (nonatomic, readonly) VALUE value;
 
-- (instancetype)initWithValue:(VALUE)value;
+- (instancetype)initWithVALUE:(VALUE)value;
+- (instancetype)initWithNSString:(NSString*)string;
+
++ (instancetype)valueWithVALUE:(VALUE)value;
++ (instancetype)valueWithNSString:(NSString*)string;
 
 - (CRBValue*)call:(NSString*)method;
 - (CRBValue*)call:(NSString*)method args:(NSArray*)values;

@@ -7,14 +7,28 @@
 	VALUE _value;
 }
 
-- (instancetype)initWithValue:(VALUE)value
+- (instancetype)initWithVALUE:(VALUE)value
 {
 	self = [super init];
-	if (self)
-	{
-		_value = value;
-	}
+	if (self) _value = value;
 	return self;
+}
+
+- (instancetype)initWithNSString:(NSString*)string
+{
+	self = [super init];
+	if (self) _value = rb_utf8_str_new_cstr(string.UTF8String);
+	return self;
+}
+
++ (instancetype)valueWithVALUE:(VALUE)value
+{
+	return [[[CRBValue alloc] initWithVALUE:value] autorelease];
+}
+
++ (instancetype)valueWithNSString:(NSString*)string
+{
+	return [[[CRBValue alloc] initWithNSString:string] autorelease];
 }
 
 - (CRBValue*)call:(NSString*)method args:(NSArray*)args
