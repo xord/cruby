@@ -12,7 +12,7 @@
 
 @interface CRuby ()
 
-+ (BOOL)requireExtension:(NSString *)path;
++ (BOOL)requireExtension:(NSString*)path;
 
 @end
 
@@ -21,8 +21,7 @@ static VALUE
 require_extension (int argc, VALUE* argv, VALUE self)
 {
 	const char* path = argc >= 1 ? StringValueCStr(argv[0]) : NULL;
-	if (!path)
-		return Qfalse;
+	if (!path) return Qfalse;
 
 	return [CRuby requireExtension:[NSString stringWithUTF8String:path]] ? Qtrue : Qfalse;
 }
@@ -32,7 +31,7 @@ require_extension (int argc, VALUE* argv, VALUE self)
 
 typedef void (^InitBlock) ();
 
-static NSMutableDictionary *gExtensions = nil;
+static NSMutableDictionary* gExtensions = nil;
 
 static BOOL gYJIT = NO;
 
@@ -90,42 +89,42 @@ static BOOL gYJIT = NO;
 #endif
 }
 
-+ (BOOL)start:(NSString *)filename
++ (BOOL)start:(NSString*)filename
 {
-	return [self start:filename rescue:^(CRBValue *exception) {
+	return [self start:filename rescue:^(CRBValue* exception) {
 		NSLog(@"Exception: %@", exception.inspect);
 	}];
 }
 
-+ (BOOL)start:(NSString *)filename rescue:(RescueBlock)rescue
++ (BOOL)start:(NSString*)filename rescue:(RescueBlock)rescue
 {
 	BOOL ret = [self load:filename rescue:rescue];
 	[self finalize];
 	return ret;
 }
 
-+ (BOOL)load:(NSString *)filename
++ (BOOL)load:(NSString*)filename
 {
-	return [self load:filename rescue:^(CRBValue *exception) {
+	return [self load:filename rescue:^(CRBValue* exception) {
 		NSLog(@"Exception: %@", exception.inspect);
 	}];
 }
 
-+ (BOOL)load:(NSString *)filename rescue:(RescueBlock)rescue
++ (BOOL)load:(NSString*)filename rescue:(RescueBlock)rescue
 {
-	NSString *s   = [NSString stringWithFormat:@"load '%@'", filename];
-	CRBValue *ret = [CRuby evaluate:s rescue:rescue];
+	NSString* s   = [NSString stringWithFormat:@"load '%@'", filename];
+	CRBValue* ret = [CRuby evaluate:s rescue:rescue];
 	return ret && ret.toBOOL;
 }
 
-+ (CRBValue *)evaluate:(NSString *)string
++ (CRBValue*)evaluate:(NSString*)string
 {
-	return [self evaluate:string rescue:^(CRBValue *exception) {
+	return [self evaluate:string rescue:^(CRBValue* exception) {
 		NSLog(@"Exception: %@", exception.inspect);
 	}];
 }
 
-+ (CRBValue *)evaluate:(NSString *)string rescue:(RescueBlock)rescue
++ (CRBValue*)evaluate:(NSString*)string rescue:(RescueBlock)rescue
 {
 	[self addResourceDirToLoadPath];
 	return [self eval:string rescue:rescue];
@@ -137,7 +136,7 @@ static BOOL gYJIT = NO;
 	if (done) return;
 	done = YES;
 
-	NSString *res_dir = [NSBundle mainBundle]
+	NSString* res_dir = [NSBundle mainBundle]
 		#if TARGET_OS_IPHONE
 			.bundlePath;
 		#else
@@ -147,14 +146,14 @@ static BOOL gYJIT = NO;
 	[self addLibraryPath:res_dir];
 }
 
-+ (CRBValue *)eval:(NSString *)string
++ (CRBValue*)eval:(NSString*)string
 {
-	return [self eval:string rescue:^(CRBValue *exception) {
+	return [self eval:string rescue:^(CRBValue* exception) {
 		NSLog(@"Exception: %@", exception.inspect);
 	}];
 }
 
-+ (CRBValue *)eval:(NSString *)string rescue:(RescueBlock)rescue
++ (CRBValue*)eval:(NSString*)string rescue:(RescueBlock)rescue
 {
 	[self setupCRuby];
 
@@ -176,9 +175,9 @@ static BOOL gYJIT = NO;
 	return ret == Qnil ? nil : [[[CRBValue alloc] initWithValue:ret] autorelease];
 }
 
-+ (void)addLibrary:(NSString *)name bundle:(NSBundle *)bundle
++ (void)addLibrary:(NSString*)name bundle:(NSBundle*)bundle
 {
-	NSString *lib_dir = [NSString stringWithFormat:
+	NSString* lib_dir = [NSString stringWithFormat:
 		#if TARGET_OS_IPHONE
 			@"%@/%@.bundle/lib", bundle.bundlePath, name];
 		#else
@@ -187,18 +186,18 @@ static BOOL gYJIT = NO;
 	[self addLibraryPath:lib_dir];
 }
 
-+ (void)addLibraryPath:(NSString *)path
++ (void)addLibraryPath:(NSString*)path
 {
 	[self eval:[NSString stringWithFormat:@"$LOAD_PATH.unshift '%@'", path]];
 }
 
-+ (void)addExtension:(NSString *)path init:(InitBlock)init
++ (void)addExtension:(NSString*)path init:(InitBlock)init
 {
 	[gExtensions[path] release];
 	gExtensions[path] = [init copy];
 }
 
-+ (BOOL)requireExtension:(NSString *)path
++ (BOOL)requireExtension:(NSString*)path
 {
 	id init = gExtensions[path];
 	if (!init) return NO;

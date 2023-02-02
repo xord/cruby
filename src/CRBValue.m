@@ -17,7 +17,7 @@
 	return self;
 }
 
-- (CRBValue *)call:(NSString *)method args:(NSArray *)args
+- (CRBValue*)call:(NSString*)method args:(NSArray*)args
 {
 	VALUE ret = Qnil;
 	ID symbol = rb_intern(method.UTF8String);
@@ -31,29 +31,29 @@
 
 		VALUE values[MAX];
 		for (NSUInteger i = 0; i < args.count; ++i)
-			values[i] = ((CRBValue *)args[i]).value;
+			values[i] = ((CRBValue*) args[i]).value;
 		ret = rb_funcallv(_value, symbol, (int) args.count, values);
 	}
 
 	return [[[CRBValue alloc] initWithValue:ret] autorelease];
 }
 
-- (CRBValue *)call:(NSString *)method
+- (CRBValue*)call:(NSString*)method
 {
 	return [self call:method args:nil];
 }
 
-- (CRBValue *)call:(NSString *)method arg1:(CRBValue *)arg1
+- (CRBValue*)call:(NSString*)method arg1:(CRBValue*)arg1
 {
 	return [self call:method args:@[arg1]];
 }
 
-- (CRBValue *)call:(NSString *)method arg1:(CRBValue *)arg1 arg2:(CRBValue *)arg2
+- (CRBValue*)call:(NSString*)method arg1:(CRBValue*)arg1 arg2:(CRBValue*)arg2
 {
 	return [self call:method args:@[arg1, arg2]];
 }
 
-- (CRBValue *)call:(NSString *)method arg1:(CRBValue *)arg1 arg2:(CRBValue *)arg2 arg3:(CRBValue *)arg3
+- (CRBValue*)call:(NSString*)method arg1:(CRBValue*)arg1 arg2:(CRBValue*)arg2 arg3:(CRBValue*)arg3
 {
 	return [self call:method args:@[arg1, arg2, arg3]];
 }
@@ -120,13 +120,13 @@
 	return RFLOAT_VALUE(f);
 }
 
-- (NSString *)toString
+- (NSString*)toString
 {
 	VALUE s = [self call:@"to_s"].value;
 	return [NSString stringWithUTF8String:StringValueCStr(s)];
 }
 
-- (NSArray *)toArray
+- (NSArray*)toArray
 {
 	VALUE a = [self call:@"to_a"].value;
 	if (a == Qnil) return nil;
@@ -140,7 +140,7 @@
 	return result;
 }
 
-- (NSDictionary *)toDictionary
+- (NSDictionary*)toDictionary
 {
 	VALUE a = [self call:@"to_a"].value;
 	if (a == Qnil) return nil;
@@ -156,7 +156,7 @@
 	return result;
 }
 
-- (NSString *)inspect
+- (NSString*)inspect
 {
 	VALUE ret = [self call:@"inspect"].value;
 	return [NSString stringWithUTF8String:StringValueCStr(ret)];
