@@ -2,6 +2,11 @@
 #import "CRBValue.h"
 
 
+#ifndef TAG_RAISE
+	#define TAG_RAISE 0x6
+#endif
+
+
 @implementation CRBValue
 {
 	VALUE _value;
@@ -31,45 +36,98 @@
 	return [[[CRBValue alloc] initWithNSString:string] autorelease];
 }
 
-- (CRBValue*)call:(NSString*)method args:(NSArray*)args
+static VALUE
+call (VALUE args)
 {
-	VALUE ret = Qnil;
-	ID symbol = rb_intern(method.UTF8String);
+	assert(RARRAY_LEN(args) >= 2);
 
-	if (!args || args.count <= 0)
-		ret = rb_funcall(_value, symbol, 0);
+	VALUE self = rb_ary_shift(args);
+	ID method  = rb_intern(RSTRING_PTR(rb_ary_shift(args)));
+
+	if (RARRAY_LEN(args) <= 0)
+		return rb_funcall(self, method, 0);
 	else
 	{
-		enum {MAX = 16};
-		if (args.count > MAX) return nil;
+		VALUE ret = Qnil;
+		RARRAY_PTR_USE(args, ptr, {
+			ret = rb_funcallv(self, method, RARRAY_LENINT(args), ptr);
+		});
+		return ret;
+	}
+}
 
-		VALUE values[MAX];
-		for (NSUInteger i = 0; i < args.count; ++i)
-			values[i] = ((CRBValue*) args[i]).value;
-		ret = rb_funcallv(_value, symbol, (int) args.count, values);
+- (CRBValue*)call:(NSString*)method args:(NSArray*)args
+{
+	return [self call:method args:args rescue:nil];
+}
+
+- (CRBValue*)call:(NSString*)method args:(NSArray*)args rescue:(RescueBlock)rescue
+{
+	NSUInteger argc = args ? args.count : 0;
+
+	VALUE array = rb_ary_new_capa(argc);
+	rb_ary_push(array, self.value);
+	rb_ary_push(array, [CRBValue valueWithNSString:method].value);
+
+	for (NSUInteger i = 0; i < argc; ++i)
+		rb_ary_push(array, ((CRBValue*) args[i]).value);
+
+	int state = 0;
+	VALUE ret = rb_protect(call, array, &state);
+
+	if (state != 0)
+	{
+		VALUE exception = rb_errinfo();
+		if (state == TAG_RAISE && RTEST(exception))
+		{
+			rb_set_errinfo(Qnil);
+			if (rescue) rescue([CRBValue valueWithVALUE:exception]);
+		}
+		else
+			rb_jump_tag(state);
 	}
 
-	return [[[CRBValue alloc] initWithValue:ret] autorelease];
+	return ret == Qnil ? nil : [CRBValue valueWithVALUE:ret];
 }
 
 - (CRBValue*)call:(NSString*)method
 {
-	return [self call:method args:nil];
+	return [self call:method args:nil rescue:nil];
+}
+
+- (CRBValue*)call:(NSString*)method rescue:(RescueBlock)rescue
+{
+	return [self call:method args:nil rescue:rescue];
 }
 
 - (CRBValue*)call:(NSString*)method arg1:(CRBValue*)arg1
 {
-	return [self call:method args:@[arg1]];
+	return [self call:method args:@[arg1] rescue:nil];
+}
+
+- (CRBValue*)call:(NSString*)method arg1:(CRBValue*)arg1 rescue:(RescueBlock)rescue
+{
+	return [self call:method args:@[arg1] rescue:rescue];
 }
 
 - (CRBValue*)call:(NSString*)method arg1:(CRBValue*)arg1 arg2:(CRBValue*)arg2
 {
-	return [self call:method args:@[arg1, arg2]];
+	return [self call:method args:@[arg1, arg2] rescue:nil];
+}
+
+- (CRBValue*)call:(NSString*)method arg1:(CRBValue*)arg1 arg2:(CRBValue*)arg2 rescue:(RescueBlock)rescue
+{
+	return [self call:method args:@[arg1, arg2] rescue:rescue];
 }
 
 - (CRBValue*)call:(NSString*)method arg1:(CRBValue*)arg1 arg2:(CRBValue*)arg2 arg3:(CRBValue*)arg3
 {
-	return [self call:method args:@[arg1, arg2, arg3]];
+	return [self call:method args:@[arg1, arg2, arg3] rescue:nil];
+}
+
+- (CRBValue*)call:(NSString*)method arg1:(CRBValue*)arg1 arg2:(CRBValue*)arg2 arg3:(CRBValue*)arg3 rescue:(RescueBlock)rescue
+{
+	return [self call:method args:@[arg1, arg2, arg3] rescue:rescue];
 }
 
 - (BOOL)isNil
