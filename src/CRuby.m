@@ -166,13 +166,13 @@ static BOOL gYJIT = NO;
 		if (state == TAG_RAISE && RTEST(exception))
 		{
 			rb_set_errinfo(Qnil);
-			if (rescue) rescue([[[CRBValue alloc] initWithValue:exception] autorelease]);
+			if (rescue) rescue([CRBValue valueWithVALUE:exception]);
 		}
 		else
 			rb_jump_tag(state);
 	}
 
-	return ret == Qnil ? nil : [[[CRBValue alloc] initWithValue:ret] autorelease];
+	return ret == Qnil ? nil : [CRBValue valueWithVALUE:ret];
 }
 
 + (void)addLibrary:(NSString*)name bundle:(NSBundle*)bundle

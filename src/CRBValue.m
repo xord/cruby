@@ -148,7 +148,7 @@
 	NSMutableArray* result = [NSMutableArray array];
 	for (long i = 0, len = RARRAY_LEN(a); i < len; ++i)
 	{
-		CRBValue* value = [[[CRBValue alloc] initWithValue:RARRAY_AREF(a, i)] autorelease];
+		CRBValue* value = [CRBValue valueWithVALUE:RARRAY_AREF(a, i)];
 		[result addObject:value];
 	}
 	return result;
@@ -163,8 +163,8 @@
 	for (long i = 0, len = RARRAY_LEN(a); i < len; ++i)
 	{
 		VALUE e = RARRAY_AREF(a, i);
-		CRBValue* key   = [[[CRBValue alloc] initWithValue:RARRAY_AREF(e, 0)] autorelease];
-		CRBValue* value = [[[CRBValue alloc] initWithValue:RARRAY_AREF(e, 1)] autorelease];
+		CRBValue* key   = [CRBValue valueWithVALUE:RARRAY_AREF(e, 0)];
+		CRBValue* value = [CRBValue valueWithVALUE:RARRAY_AREF(e, 1)];
 		[result setObject:value forKey:[key toString]];
 	}
 	return result;
