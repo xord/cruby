@@ -9,18 +9,15 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - name: checkout
-        uses: actions/checkout@v2
+      - name: ruby 3.2
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.2
 
       - name: xcode
         run: |
           sudo xcode-select -s '/Applications/Xcode_13.4.1.app/Contents/Developer'
           xcodebuild -version
-
-      - name: ruby 3.2
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: 3.2
 
       - name: setup rust
         uses: actions-rs/toolchain@v1
@@ -34,28 +31,24 @@ jobs:
         run: |
           rustup target list | grep apple | grep -v '(installed)' | xargs rustup target add
 
-      - name: version
-        id: version
-        run: |
-          echo value=$(ruby -e 'print "${{ github.ref }}"[/\/v([\w\.\-]+)/, 1]') >> $GITHUB_OUTPUT
+      - name: checkout
+        uses: actions/checkout@v2
 
       - name: build
-        run: rake build
-
-      - name: check outputs
         run: |
+          rake build
           find CRuby/ -iname '*.a' | xargs ls -lh
           find CRuby/ -iname '*.a' | xargs lipo -info
 
-      - name: archive
-        run: rake archive
-
-      - name: check archive
+      - name: create prebuilt archive
+        id: archive
         run: |
-          find . -iname 'CRuby_prebuilt*.tar.gz' | xargs ls -lh
+          rake archive
+          find . -iname '*.tar.gz' | xargs ls -lh
+          echo path=$(ruby -e 'print Dir.glob("CRuby_prebuilt-*.tar.gz").first') >> $GITHUB_OUTPUT
 
-      - name: create release
-        id: create_release
+      - name: create github release
+        id: release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -65,12 +58,12 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: upload
+      - name: upload to github release
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./CRuby_prebuilt-${{ steps.version.outputs.value }}.tar.gz
-          asset_name:   CRuby_prebuilt-${{ steps.version.outputs.value }}.tar.gz
+          upload_url: ${{ steps.release.outputs.upload_url }}
+          asset_path: ./${{ steps.archive.outputs.path }}
+          asset_name:   ${{ steps.archive.outputs.path }}
           asset_content_type: application/zip
