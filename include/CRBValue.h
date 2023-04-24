@@ -37,12 +37,12 @@ typedef void (^RescueBlock) (CRBValue* exception);
 - (BOOL)isArray;
 - (BOOL)isDictionary;
 
--          (BOOL)toBOOL;
--     (NSInteger)toInteger;
--        (double)toFloat;
--     (NSString*)toString;
--      (NSArray*)toArray;
-- (NSDictionary*)toDictionary;
+-                                (BOOL)toBOOL;
+-                           (NSInteger)toInteger;
+-                              (double)toFloat;
+-                           (NSString*)toString;
+-                 (NSArray<CRBValue*>*)toArray;
+- (NSDictionary<CRBValue*, CRBValue*>*)toDictionary;
 
 - (NSString*)inspect;
 

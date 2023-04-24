@@ -198,7 +198,7 @@ call (VALUE args)
 	return [NSString stringWithUTF8String:StringValueCStr(s)];
 }
 
-- (NSArray*)toArray
+- (NSArray<CRBValue*>*)toArray
 {
 	VALUE a = [self call:@"to_a"].value;
 	if (a == Qnil) return nil;
@@ -212,7 +212,7 @@ call (VALUE args)
 	return result;
 }
 
-- (NSDictionary*)toDictionary
+- (NSDictionary<CRBValue*, CRBValue*>*)toDictionary
 {
 	VALUE a = [self call:@"to_a"].value;
 	if (a == Qnil) return nil;
