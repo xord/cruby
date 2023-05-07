@@ -1,4 +1,4 @@
-# -*- mode: ruby; coding: utf-8 -*-
+# -*- mode: ruby -*-
 
 
 require_relative 'config'
