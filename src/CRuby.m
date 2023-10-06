@@ -56,7 +56,13 @@ static BOOL gYJIT = NO;
 	#endif
 	CRuby_init(Init_prelude, gYJIT);
 
-	[self addLibrary:@"CRuby" bundle:[NSBundle bundleForClass:CRuby.class]];
+	NSBundle* bundle = [NSBundle bundleForClass:CRuby.class];
+	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/rbconfig"];
+	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/site_ruby/" CRUBY_LIB_DIR_VERSION];
+	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/site_ruby"];
+	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/vendor_ruby/" CRUBY_LIB_DIR_VERSION];
+	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/vendor_ruby"];
+	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/" CRUBY_LIB_DIR_VERSION];
 
 	VALUE mCRuby = rb_define_module("CRuby");
 	rb_define_module_function(mCRuby, "require_extension", require_extension, -1);
@@ -181,11 +187,16 @@ static BOOL gYJIT = NO;
 
 + (void)addLibrary:(NSString*)name bundle:(NSBundle*)bundle
 {
+	[self addLibrary:name bundle:bundle dir:@"lib"];
+}
+
++ (void)addLibrary:(NSString*)name bundle:(NSBundle*)bundle dir:(NSString*)dir
+{
 	NSString* lib_dir = [NSString stringWithFormat:
 		#if TARGET_OS_IPHONE
-			@"%@/%@.bundle/lib", bundle.bundlePath, name];
+			@"%@/%@.bundle/%@", bundle.bundlePath, name, dir];
 		#else
-			@"%@/%@.bundle/Contents/Resources/lib", bundle.resourcePath, name];
+			@"%@/%@.bundle/Contents/Resources/%@", bundle.resourcePath, name, dir];
 		#endif
 	[self addLibraryPath:lib_dir];
 }

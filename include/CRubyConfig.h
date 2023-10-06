@@ -29,4 +29,7 @@
 #endif
 
 
+#define CRUBY_LIB_DIR_VERSION @
+
+
 #endif//EOH

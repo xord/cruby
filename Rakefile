@@ -58,6 +58,11 @@ def ruby25_or_higher? ()
   version_string(*CRuby.ruby_version) >= version_string(2, 5)
 end
 
+def rbconfig(rubybin, key)
+  `#{rubybin} -rrbconfig -e 'print RbConfig::CONFIG["#{key}"]'`
+    .tap {|value| raise "Failed to get RbConfig value for '#{key}'" if value.empty?}
+end
+
 def to_rust_target (os, sdk, arch)
   arch = arch.to_s.sub /^arm/, 'aarch'
   os   = {
@@ -120,8 +125,9 @@ OUTPUT_XCFRAMEWORK_INFO_PLIST = "#{OUTPUT_XCFRAMEWORK_DIR}/Info.plist"
 OUTPUT_INC_DIR = "#{OUTPUT_DIR}/include"
 OUTPUT_RUBY_H  = "#{OUTPUT_INC_DIR}/ruby.h"
 
-OUTPUT_LIB_DIR     = "#{OUTPUT_DIR}/lib"
-OUTPUT_RBCONFIG_RB = "#{OUTPUT_LIB_DIR}/rbconfig.rb"
+OUTPUT_LIB_DIR          = "#{OUTPUT_DIR}/lib/ruby"
+OUTPUT_LIB_RBCONFIG_DIR = "#{OUTPUT_LIB_DIR}/rbconfig"
+OUTPUT_RBCONFIG_RB      = "#{OUTPUT_LIB_RBCONFIG_DIR}/rbconfig.rb"
 
 OUTPUT_ARCHIVE   = "#{NAME}_prebuilt-#{CRuby.version}.tar.gz"
 PREBUILT_URL     = "#{GITHUB_URL}/releases/download/v#{CRuby.version}/#{OUTPUT_ARCHIVE}"
@@ -152,7 +158,7 @@ task :test => 'test:test'
 directory BUILD_DIR
 directory OUTPUT_DIR
 directory OUTPUT_INC_DIR
-directory OUTPUT_LIB_DIR
+directory OUTPUT_LIB_RBCONFIG_DIR
 
 [
   [RUBY_DIR, RUBY_URL, RUBY_CONFIGURE],
@@ -291,18 +297,25 @@ file OUTPUT_XCFRAMEWORK_INFO_PLIST do |t|
   sh %( xcodebuild -create-xcframework -output #{OUTPUT_XCFRAMEWORK_DIR} #{libs.join ' '} )
 end
 
-file OUTPUT_RUBY_H => [RUBY_CONFIGURE, OUTPUT_INC_DIR] do
+file OUTPUT_RUBY_H => [RUBY_CONFIGURE, OUTPUT_INC_DIR, NATIVE_RUBY_BIN] do
+  lib_dir_ver = File.basename rbconfig(NATIVE_RUBY_BIN, :rubylibdir)
+
   sh %( cp -rf #{RUBY_DIR}/include/* #{OUTPUT_INC_DIR} )
   sh %( cp -rf #{INC_DIR}/* #{OUTPUT_INC_DIR})
   sh %( patch -p1 -d #{OUTPUT_INC_DIR} < #{HEADERS_PATCH} )
+
+  modify_file "#{OUTPUT_INC_DIR}/CRubyConfig.h" do |s|
+    s.sub /#define\s+CRUBY_LIB_DIR_VERSION\s+@/, %|#define CRUBY_LIB_DIR_VERSION @"#{lib_dir_ver}"|
+  end
 end
 
-file OUTPUT_RBCONFIG_RB => [RUBY_CONFIGURE, OUTPUT_LIB_DIR] do
+file OUTPUT_RBCONFIG_RB => [RUBY_CONFIGURE, OUTPUT_LIB_RBCONFIG_DIR, NATIVE_RUBY_BIN] do
+  lib_dir      = rbconfig NATIVE_RUBY_BIN, :rubylibprefix
+  lib_arch_dir = rbconfig NATIVE_RUBY_BIN, :rubyarchdir
+
   write_file OUTPUT_RBCONFIG_RB, 'require "rbconfig-#{CRUBY_BUILD_SDK_AND_ARCH}"'
-  sh %( cp -rf #{RUBY_DIR}/lib/* #{OUTPUT_LIB_DIR} )
-  Dir.glob "#{RUBY_DIR}/ext/*/lib" do |lib|
-    sh %( cp -rf #{lib}/* #{OUTPUT_LIB_DIR} ) unless Dir.glob("#{lib}/*").empty?
-  end
+  sh %( cp -rf #{lib_dir}/* #{OUTPUT_LIB_DIR} )
+  sh %( rm -rf #{OUTPUT_LIB_DIR}#{lib_arch_dir.sub /^#{lib_dir}/, ''} )
 end
 
 
@@ -350,8 +363,7 @@ TARGETS.each do |os, sdk, archs|
     libossl     = "#{ossl_install_dir}/lib/libssl.a"
     libyaml     = "#{yaml_install_dir}/lib/libyaml.a"
 
-    rbconfig_rb     = "#{OUTPUT_LIB_DIR}/rbconfig-#{sdk}-#{arch}.rb"
-    rbconfig_rb_dir = File.dirname rbconfig_rb
+    rbconfig_rb = "#{OUTPUT_LIB_RBCONFIG_DIR}/rbconfig-#{sdk}-#{arch}.rb"
 
     arch_lib_file = "#{build_arch_dir}/#{output_lib_name}"
 
@@ -504,9 +516,7 @@ TARGETS.each do |os, sdk, archs|
       end
     end# libyaml
 
-    directory rbconfig_rb_dir
-
-    file rbconfig_rb => [libruby, rbconfig_rb_dir] do
+    file rbconfig_rb => [libruby, OUTPUT_LIB_RBCONFIG_DIR] do
       sh %( cp "#{ruby_dir}/rbconfig.rb" #{rbconfig_rb} )
     end
 
