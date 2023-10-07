@@ -134,17 +134,20 @@ ENV['ac_cv_func_setpgrp_void'] = 'yes'
 task :default => :build
 
 desc "delete all temporary files"
-task :clean do
+task :clean => 'test:clean' do
   sh %( rm -rf #{BUILD_DIR} #{OUTPUT_DIR} #{OUTPUT_ARCHIVE} )
 end
 
 desc "delete all generated files"
-task :clobber => :clean do
+task :clobber => [:clean, 'test:clobber'] do
   sh %( rm -rf #{HEADERS_PATCH_DEV_DIR} )
 end
 
 desc "build"
 task :build => [OUTPUT_XCFRAMEWORK_INFO_PLIST, OUTPUT_RUBY_H, OUTPUT_RBCONFIG_RB]
+
+desc "test"
+task :test => 'test:test'
 
 directory BUILD_DIR
 directory OUTPUT_DIR
@@ -205,7 +208,7 @@ file RUBY_CONFIGURE do
         Init_enc();
         Init_ext();
         Init_extra_exts();
-        init_prelude();
+        if (init_prelude) init_prelude();
         #if RUBY_API_VERSION_MAJOR >= 3
           rb_call_builtin_inits();
         #endif
@@ -404,7 +407,7 @@ TARGETS.each do |os, sdk, archs|
 
           enables  = yjit ? %w[jit-support yjit] : []
           disables = %w[shared dln install-doc]
-          withouts = %w[tcl tk fiddle bigdecimal]
+          withouts = %w[fiddle bigdecimal readline]
           nofuncs  = %w[backtrace system syscall __syscall getentropy]
 
           envs = {
@@ -596,3 +599,18 @@ namespace :headers_patch do
     end
   end
 end# headers_patch
+
+
+namespace :test do
+
+  tasks = %i{clobber clean test}
+
+  tasks.each do |name|
+    task name do
+      Dir.chdir 'test/macos' do
+        sh %( rake #{name} )
+      end
+    end
+  end
+
+end# test

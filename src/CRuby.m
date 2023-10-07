@@ -49,7 +49,11 @@ static BOOL gYJIT = NO;
 	gExtensions = [[NSMutableDictionary alloc] init];
 
 	void CRuby_init(void (*)(), bool);
-	void Init_prelude();
+	#ifdef CRUBY_TEST
+		void* Init_prelude = NULL;
+	#else
+		void Init_prelude();
+	#endif
 	CRuby_init(Init_prelude, gYJIT);
 
 	[self addLibrary:@"CRuby" bundle:[NSBundle bundleForClass:CRuby.class]];

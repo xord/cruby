@@ -1,0 +1,34 @@
+# -*- mode: ruby -*-
+
+platform :macos, '11.0'
+
+%w[CRubyApp CRubyAppTests].each do |t|
+  target t do
+    pod 'CRuby', path: '../..'
+  end
+end
+
+
+post_install do |installer|
+  each_build_configuration installer do |c|
+    {
+      ARCHS:                        :arm64,
+      VALID_ARCHS:                  :arm64,
+      ENABLE_BITCODE:               :NO,
+      HEADER_SEARCH_PATHS:          '$SRCROOT/../../../CRuby/include',
+      GCC_PREPROCESSOR_DEFINITIONS: '$(inherited) COCOAPODS=1 CRUBY_TEST=1'
+    }.each {|k, v| c.build_settings[k.to_s] = v.to_s}
+  end
+end
+
+def each_build_configuration (installer, &block)
+  installer.pods_project.build_configurations.each do |config|
+    block.call config
+  end
+
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      block.call config
+    end
+  end
+end

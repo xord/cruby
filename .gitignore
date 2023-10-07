@@ -1,5 +1,7 @@
 *~
 *.tar.gz
+*.xcodeproj
+*.xcworkspace
 
 /.ruby
 /.openssl
@@ -7,5 +9,7 @@
 /.build
 /.headers
 /CRuby
+/test/macos/Pods
+/test/macos/*/Info.plist
 
 .DS_Store

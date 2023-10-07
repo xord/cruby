@@ -1,0 +1,16 @@
+PODS:
+  - CRuby (3.2.202)
+
+DEPENDENCIES:
+  - CRuby (from `../..`)
+
+EXTERNAL SOURCES:
+  CRuby:
+    :path: "../.."
+
+SPEC CHECKSUMS:
+  CRuby: f677262f16d7c714efd3021c90246296cf5bf9c3
+
+PODFILE CHECKSUM: 4ea91a20e4219b7c889fb3869617b3754a7aac46
+
+COCOAPODS: 1.13.0

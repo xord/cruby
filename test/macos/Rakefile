@@ -1,0 +1,41 @@
+NAME    = 'CRubyApp'
+PROJECT = 'project.yml'
+
+XCODEPROJ   = "#{NAME}.xcodeproj"
+XCWORKSPACE = "#{NAME}.xcworkspace"
+
+
+def xcodebuild(workspace = XCWORKSPACE)
+  "xcodebuild -workspace #{workspace} -scheme #{NAME}"
+end
+
+
+task :default => :test
+
+task :clobber => :clean do
+  sh %( rm -rf Pods #{XCODEPROJ} #{XCWORKSPACE} )
+end
+
+task :clean do
+  sh %( #{xcodebuild} clean ) if File.exist? XCWORKSPACE
+end
+
+task :build => XCWORKSPACE do
+  sh %( #{xcodebuild} build )
+end
+
+task :test => XCWORKSPACE do
+  sh %( #{xcodebuild} test )
+end
+
+task :xcode => XCWORKSPACE do
+  sh %( open #{XCWORKSPACE} )
+end
+
+file XCWORKSPACE => XCODEPROJ do
+  sh %( os=macos noprebuilt=1 pod install --verbose )
+end
+
+file XCODEPROJ => PROJECT do
+  sh %( xcodegen generate )
+end

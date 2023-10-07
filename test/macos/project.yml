@@ -1,0 +1,31 @@
+name: CRubyApp
+
+options:
+  bundleIdPrefix: org.xord
+  deploymentTarget:
+    macOS: 11.0
+
+settings:
+  base:
+    FRAMEWORK_SEARCH_PATHS: $SRCROOT/../../CRuby
+    HEADER_SEARCH_PATHS: $SRCROOT/../../CRuby/include
+    SWIFT_OBJC_BRIDGING_HEADER: CRubyApp/BridgingHeader.h
+
+targets:
+  CRubyApp:
+    type: application
+    platform: macOS
+    sources:
+      - CRubyApp
+    info:
+      path: CRubyApp/Info.plist
+
+  CRubyAppTests:
+    type: bundle.unit-test
+    platform: macOS
+    dependencies:
+      - target: CRubyApp
+    sources:
+      - CRubyAppTests
+    info:
+      path: CRubyAppTests/Info.plist
