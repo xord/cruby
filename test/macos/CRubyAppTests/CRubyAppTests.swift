@@ -7,6 +7,20 @@ final class CRubyAppTests: XCTestCase {
         XCTAssertEqual("3", evalToString("1 + 2"))
     }
 
+    func testLoadPath() {
+        XCTAssertEqual(
+            "[" +
+            "\"/\", " +
+            "\"/lib/ruby/rbconfig\", " +
+            "\"/lib/ruby/site_ruby/3.2.0\", " +
+            "\"/lib/ruby/site_ruby\", " +
+            "\"/lib/ruby/vendor_ruby/3.2.0\", " +
+            "\"/lib/ruby/vendor_ruby\", " +
+            "\"/lib/ruby/3.2.0\"" +
+            "]",
+            evalToString("$LOAD_PATH.map {_1.sub %r|.*/Resources/?|, '/'}"))
+    }
+
     func testRequire() {
         XCTAssertTrue(evalToBool("require 'stringio'"))
         XCTAssertFalse(evalToBool("require 'stringio'"))
