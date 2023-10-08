@@ -57,12 +57,12 @@ static BOOL gYJIT = NO;
 	CRuby_init(Init_prelude, gYJIT);
 
 	NSBundle* bundle = [NSBundle bundleForClass:CRuby.class];
-	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/rbconfig"];
-	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/site_ruby/" CRUBY_LIB_DIR_VERSION];
-	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/site_ruby"];
-	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/vendor_ruby/" CRUBY_LIB_DIR_VERSION];
-	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/vendor_ruby"];
 	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/" CRUBY_LIB_DIR_VERSION];
+	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/vendor_ruby"];
+	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/vendor_ruby/" CRUBY_LIB_DIR_VERSION];
+	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/site_ruby"];
+	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/site_ruby/" CRUBY_LIB_DIR_VERSION];
+	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/rbconfig"];
 
 	VALUE mCRuby = rb_define_module("CRuby");
 	rb_define_module_function(mCRuby, "require_extension", require_extension, -1);
