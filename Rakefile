@@ -518,6 +518,10 @@ TARGETS.each do |os, sdk, archs|
 
     file rbconfig_rb => [libruby, OUTPUT_LIB_RBCONFIG_DIR] do
       sh %( cp "#{ruby_dir}/rbconfig.rb" #{rbconfig_rb} )
+      modify_file rbconfig_rb do |s|
+        s.sub /TOPDIR\s*=.*$/,
+          "TOPDIR = File.dirname(__FILE__).chomp!('/lib/ruby/rbconfig')"
+      end
     end
 
     file arch_lib_file => [libruby, libossl, libyaml] do
