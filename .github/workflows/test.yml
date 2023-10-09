@@ -19,5 +19,8 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2
 
+      - name: install xcodegen
+        run: brew update && brew install xcodegen
+
       - name: test
         run: rake test
