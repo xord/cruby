@@ -14,8 +14,12 @@ BUILD_OS      = ENV['os']
 #   => build only for macosx:x86_64 and iphoneos:arm64.
 BUILD_TARGETS = (ENV['targets'] || ENV['target'])&.split(/[ ,]+/)
 
+# $ rake download_or_build prebuilt=/path/to/archive
+#   => use user specified prebuilt archive.
+PREBUILT_PATH = ENV['prebuilt']
+
 # $ rake download_or_build noprebuilt=1
-#   => do not download prebuild archive.
+#   => do not download prebuilt archive.
 NO_PREBUILT   = (ENV['noprebuilt'] || 0).to_i != 0
 
 # $ rake build yjit_stats=1
@@ -131,7 +135,7 @@ OUTPUT_RBCONFIG_RB      = "#{OUTPUT_LIB_RBCONFIG_DIR}/rbconfig.rb"
 
 OUTPUT_ARCHIVE   = "#{NAME}_prebuilt-#{CRuby.version}.tar.gz"
 PREBUILT_URL     = "#{GITHUB_URL}/releases/download/v#{CRuby.version}/#{OUTPUT_ARCHIVE}"
-PREBUILT_ARCHIVE = "downloaded_#{OUTPUT_ARCHIVE}"
+PREBUILT_ARCHIVE = PREBUILT_PATH || "downloaded_#{OUTPUT_ARCHIVE}"
 
 PATHS = ENV['PATH']
 ENV['ac_cv_func_setpgrp_void'] = 'yes'
