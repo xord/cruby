@@ -2,6 +2,9 @@
 #import "CRBValue.h"
 
 
+#include <assert.h>
+
+
 #ifndef TAG_RAISE
 	#define TAG_RAISE 0x6
 #endif
