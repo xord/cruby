@@ -436,7 +436,7 @@ TARGETS.each do |os, sdk, archs|
             CFLAGS:   "#{flags} -fvisibility=hidden",
             CXXFLAGS: "-fvisibility-inline-hidden",
             ASFLAGS:  "#{isysroot}",
-            LDFLAGS:  "#{flags} -L#{sdk_root}/usr/lib -lSystem -framework Security",
+            LDFLAGS:  "#{flags} -L#{sdk_root}/usr/lib -framework Security",
             RUSTC:    rustc_target&.then {|t| "rustc --target=#{t}"}
           }.compact.map {|k, v| "#{k}='#{v}'"}.join ' '
           opts = %W[
