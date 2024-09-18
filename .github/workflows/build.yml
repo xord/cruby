@@ -12,7 +12,7 @@ jobs:
 
       - name: xcode
         run: |
-          sudo xcode-select -s '/Applications/Xcode_13.4.1.app/Contents/Developer'
+          sudo xcode-select -s '/Applications/Xcode_15.4.app/Contents/Developer'
           xcodebuild -version
 
       - name: ruby 3.2
