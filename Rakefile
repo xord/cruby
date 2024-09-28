@@ -418,7 +418,7 @@ TARGETS.each do |os, sdk, archs|
       file makefile => makefile_dep do
         chdir ruby_dir do
           rustc_target = to_rust_target os, sdk, arch
-          yjit         = rustc_target != nil
+          yjit         = rustc_target != nil && !ios
           flags       += ' -DYJIT_STATS=1' if yjit && YJIT_STATS
 
           enables  = yjit ? %w[jit-support yjit] : []
