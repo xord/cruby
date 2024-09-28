@@ -120,7 +120,7 @@ SYSTEM_RUBY_VER = RUBY_VERSION[/^(\d+\.\d+)\.\d+/, 1]
  EMBED_RUBY_VER = CRuby.ruby_version[0..1].join('.')
 BASE_RUBY       = SYSTEM_RUBY_VER != EMBED_RUBY_VER ? NATIVE_RUBY_BIN : nil
 
-IGNORE_BUNDLED_GEMS = %w[rbs debug]
+IGNORE_BUNDLED_GEMS = %w[racc rbs debug]
 
 OUTPUT_XCFRAMEWORK_NAME       = "#{NAME}.xcframework"
 OUTPUT_XCFRAMEWORK_DIR        = "#{OUTPUT_DIR}/#{OUTPUT_XCFRAMEWORK_NAME}"
