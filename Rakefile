@@ -225,7 +225,7 @@ file RUBY_CONFIGURE do
         Init_builtin_features();
 
         #if USE_YJIT
-          if (opt.yjit) rb_yjit_init();
+          rb_yjit_init(opt.yjit);
         #endif
 
         rb_jit_cont_init();
