@@ -537,14 +537,26 @@ TARGETS.each do |os, sdk, archs|
         .map {|dir| Dir.glob "#{dir}/**/*.a"}
         .flatten
         .reject {|path| excludes.any? {|s| path.include? s}}
-        .each do |path|
+        .each do |a_path|
 
-        a_dir    = path[%r|#{build_arch_dir}/(.+)\.a$|, 1]
+        a_dir    = a_path[%r|#{build_arch_dir}/(.+)\.a$|, 1]
         objs_dir = "#{extract_dir}/#{a_dir}"
 
-        sh %( mkdir -p #{objs_dir} && cp #{path} #{objs_dir} )
+        sh %( mkdir -p #{objs_dir} && cp #{a_path} #{objs_dir} )
         chdir objs_dir do
-          sh %( ar x #{File.basename path} )
+          a_name = File.basename a_path
+          objs   = `ar t #{a_name}`.lines(chomp: true).select {_1.end_with? '.o'}
+          if objs.tally.all? {|_, count| count == 1}
+            sh %( ar x #{a_name} )
+          else
+            objs.tally.each do |obj, count|
+              (1..count).each do |nth|
+                sh %( ar x #{a_name} #{obj} )
+                sh %( mv #{obj} #{nth}_#{obj} ) if count >= 2
+                sh %( ar d #{a_name} #{obj} )
+              end
+            end
+          end
         end
       end
 
