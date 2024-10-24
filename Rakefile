@@ -1,6 +1,5 @@
 # -*- mode: ruby -*-
 
-
 require 'open-uri'
 require_relative 'config'
 
