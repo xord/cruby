@@ -8,8 +8,8 @@ GITHUB_URL  = "https://github.com/xord/cruby"
 RUBY_URL    = 'https://cache.ruby-lang.org/pub/ruby/3.3/ruby-3.3.7.tar.gz'
 RUBY_SHA256 = '9c37c3b12288c7aec20ca121ce76845be5bb5d77662a24919651aaf1d12c8628'
 
-OSSL_URL    = 'https://github.com/openssl/openssl/releases/download/openssl-3.4.0/openssl-3.4.0.tar.gz'
-OSSL_SHA256 = 'e15dda82fe2fe8139dc2ac21a36d4ca01d5313c75f99f46c4e8a27709b7294bf'
+OSSL_URL    = 'https://github.com/openssl/openssl/releases/download/openssl-3.4.1/openssl-3.4.1.tar.gz'
+OSSL_SHA256 = '002a2d6b30b58bf4bea46c43bdd96365aaf8daa6c428782aa4feee06da197df3'
 
 YAML_URL    = 'https://github.com/yaml/libyaml/releases/download/0.2.5/yaml-0.2.5.tar.gz'
 
