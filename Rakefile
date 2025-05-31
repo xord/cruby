@@ -119,7 +119,7 @@ SYSTEM_RUBY_VER = RUBY_VERSION[/^(\d+\.\d+)\.\d+/, 1]
  EMBED_RUBY_VER = CRuby.ruby_version[0..1].join('.')
 BASE_RUBY       = SYSTEM_RUBY_VER != EMBED_RUBY_VER ? NATIVE_RUBY_BIN : nil
 
-IGNORE_BUNDLED_GEMS = %w[racc rbs debug]
+UNPACK_GEMS = %w[racc rbs debug]
 
 OUTPUT_XCFRAMEWORK_NAME       = "#{NAME}.xcframework"
 OUTPUT_XCFRAMEWORK_DIR        = "#{OUTPUT_DIR}/#{OUTPUT_XCFRAMEWORK_NAME}"
@@ -187,8 +187,8 @@ directory OUTPUT_LIB_RBCONFIG_DIR
 end
 
 file RUBY_CONFIGURE do
-  # ignore some bundled_gems
-  gems             = IGNORE_BUNDLED_GEMS
+  # unpack some bundled_gems
+  gems             = UNPACK_GEMS
   bundled_gems     = "#{RUBY_DIR}/gems/bundled_gems"
   bundled_gem_dirs = gems.map {|gem| "#{RUBY_DIR}/.bundle/gems/#{gem}-*"}
 
@@ -196,6 +196,10 @@ file RUBY_CONFIGURE do
     s.gsub(/^\s*(#{gems.join '|'})\s+/) {"##{$1} "}
   end
   sh %( rm -rf #{bundled_gem_dirs.join ' '} )
+
+  gems.each do |gem|
+    sh %( gem unpack --target=#{RUBY_DIR}/ext/ #{RUBY_DIR}/gems/#{gem}-*.gem )
+  end
 
   # append 'CRuby_init()' func to ruby.c
   modify_file "#{RUBY_DIR}/ruby.c" do |s|
