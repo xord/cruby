@@ -2,6 +2,8 @@
 
 This library allows you to embed CRuby interpreter to your macOS or iOS app.
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/xord/cruby)
+![License](https://img.shields.io/github/license/xord/reflex)
 ![Build](https://github.com/xord/cruby/workflows/Build/badge.svg)
 
 # How To Use
