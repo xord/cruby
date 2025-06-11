@@ -4,6 +4,7 @@
 *.xcworkspace
 
 /.ruby
+/.gems
 /.openssl
 /.libyaml
 /.build

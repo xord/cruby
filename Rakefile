@@ -98,10 +98,15 @@ TARGETS = [
 ROOT_DIR   = __dir__
 INC_DIR    = "#{ROOT_DIR}/include"
 RUBY_DIR   = "#{ROOT_DIR}/.ruby"
+GEMS_DIR   = "#{ROOT_DIR}/.gems"
 OSSL_DIR   = "#{ROOT_DIR}/.openssl"
 YAML_DIR   = "#{ROOT_DIR}/.libyaml"
 BUILD_DIR  = "#{ROOT_DIR}/.build"
 OUTPUT_DIR = "#{ROOT_DIR}/#{NAME}"
+
+RUBY_ARCHIVE = "#{ROOT_DIR}/#{File.basename RUBY_URL}"
+OSSL_ARCHIVE = "#{ROOT_DIR}/#{File.basename OSSL_URL}"
+YAML_ARCHIVE = "#{ROOT_DIR}/#{File.basename YAML_URL}"
 
 RUBY_CONFIGURE   = "#{RUBY_DIR}/configure"
 OSSL_CONFIGURE   = "#{OSSL_DIR}/Configure"
@@ -111,6 +116,8 @@ YAML_CONFIGURE   = "#{YAML_DIR}/configure"
 HEADERS_PATCH         = "#{ROOT_DIR}/headers.patch"
 HEADERS_PATCH_DEV_DIR = "#{ROOT_DIR}/.headers"
 
+GEMS_TOUCH = "#{GEMS_DIR}/touch"
+
 NATIVE_BUILD_DIR        = "#{BUILD_DIR}/native"
 NATIVE_RUBY_INSTALL_DIR = "#{NATIVE_BUILD_DIR}/ruby-install"
 NATIVE_RUBY_BIN         = "#{NATIVE_RUBY_INSTALL_DIR}/bin/ruby"
@@ -118,8 +125,6 @@ NATIVE_RUBY_BIN         = "#{NATIVE_RUBY_INSTALL_DIR}/bin/ruby"
 SYSTEM_RUBY_VER = RUBY_VERSION[/^(\d+\.\d+)\.\d+/, 1]
  EMBED_RUBY_VER = CRuby.ruby_version[0..1].join('.')
 BASE_RUBY       = SYSTEM_RUBY_VER != EMBED_RUBY_VER ? NATIVE_RUBY_BIN : nil
-
-UNPACK_GEMS = %w[racc rbs debug]
 
 OUTPUT_XCFRAMEWORK_NAME       = "#{NAME}.xcframework"
 OUTPUT_XCFRAMEWORK_DIR        = "#{OUTPUT_DIR}/#{OUTPUT_XCFRAMEWORK_NAME}"
@@ -129,6 +134,7 @@ OUTPUT_INC_DIR = "#{OUTPUT_DIR}/include"
 OUTPUT_RUBY_H  = "#{OUTPUT_INC_DIR}/ruby.h"
 
 OUTPUT_LIB_DIR          = "#{OUTPUT_DIR}/lib/ruby"
+OUTPUT_LIB_DATA_DIR     = "#{OUTPUT_LIB_DIR}/data"
 OUTPUT_LIB_RBCONFIG_DIR = "#{OUTPUT_LIB_DIR}/rbconfig"
 OUTPUT_RBCONFIG_RB      = "#{OUTPUT_LIB_RBCONFIG_DIR}/rbconfig.rb"
 
@@ -149,7 +155,7 @@ end
 
 desc "delete all generated files"
 task :clobber => [:clean, 'test:clobber'] do
-  sh %( rm -rf #{HEADERS_PATCH_DEV_DIR} )
+  sh %( rm -rf #{GEMS_DIR} #{HEADERS_PATCH_DEV_DIR} )
 end
 
 desc "build"
@@ -158,18 +164,18 @@ task :build => [OUTPUT_XCFRAMEWORK_INFO_PLIST, OUTPUT_RUBY_H, OUTPUT_RBCONFIG_RB
 desc "test"
 task :test => 'test:test'
 
+directory GEMS_DIR
 directory BUILD_DIR
 directory OUTPUT_DIR
 directory OUTPUT_INC_DIR
+directory OUTPUT_LIB_DATA_DIR
 directory OUTPUT_LIB_RBCONFIG_DIR
 
 [
-  [RUBY_DIR, RUBY_URL, RUBY_CONFIGURE],
-  [OSSL_DIR, OSSL_URL, OSSL_CONFIGURE],
-  [YAML_DIR, YAML_URL, YAML_CONFIGURE]
-].each do |dir, url, configure|
-  archive = "#{ROOT_DIR}/#{File.basename url}"
-
+  [RUBY_DIR, RUBY_URL, RUBY_ARCHIVE, RUBY_CONFIGURE],
+  [OSSL_DIR, OSSL_URL, OSSL_ARCHIVE, OSSL_CONFIGURE],
+  [YAML_DIR, YAML_URL, YAML_ARCHIVE, YAML_CONFIGURE]
+].each do |dir, url, archive, configure|
   task :clobber do
     sh %( rm -rf #{archive} #{dir} )
   end
@@ -181,26 +187,12 @@ directory OUTPUT_LIB_RBCONFIG_DIR
   end
 
   file configure => [dir, archive] do
-    sh %( tar xzf #{archive} -C #{dir} --strip=1 )
+    sh %( tar xzf #{archive} --directory=#{dir} --strip=1 )
     sh %( touch #{configure} )
   end
 end
 
 file RUBY_CONFIGURE do
-  # unpack some bundled_gems
-  gems             = UNPACK_GEMS
-  bundled_gems     = "#{RUBY_DIR}/gems/bundled_gems"
-  bundled_gem_dirs = gems.map {|gem| "#{RUBY_DIR}/.bundle/gems/#{gem}-*"}
-
-  modify_file bundled_gems do |s|
-    s.gsub(/^\s*(#{gems.join '|'})\s+/) {"##{$1} "}
-  end
-  sh %( rm -rf #{bundled_gem_dirs.join ' '} )
-
-  gems.each do |gem|
-    sh %( gem unpack --target=#{RUBY_DIR}/ext/ #{RUBY_DIR}/gems/#{gem}-*.gem )
-  end
-
   # append 'CRuby_init()' func to ruby.c
   modify_file "#{RUBY_DIR}/ruby.c" do |s|
     s + <<~EOS
@@ -268,6 +260,56 @@ file RUBY_CONFIGURE do
   end
 end
 
+file RUBY_CONFIGURE => GEMS_TOUCH do
+  # place the bundled gems and the gems specified in the Gemfile in the same
+  # directory structure as the standard library
+
+  sh %( rm -rf #{RUBY_DIR}/.bundle/gems/* )
+  sh %( rm -rf #{RUBY_DIR}/lib/prism* )
+
+  rubyver     = rbconfig('ruby', :ruby_version)
+  locked_gems = Dir.glob("#{GEMS_DIR}/ruby/#{rubyver}/cache/*.gem")
+    .map {"'#{_1}'"}.join ' '
+  sh %( cp #{locked_gems} #{RUBY_DIR}/gems/ ) unless locked_gems.empty?
+
+  to_ver_str = -> ver {ver.split('.').map {|s| '%03d' % s.to_i}.join}
+  gems       = Dir.glob("#{RUBY_DIR}/gems/*.gem")
+    .map {File.basename _1}
+    .each.with_object({}) {|filename, hash|
+      name, ver = /(.+)\-([\.\d]+)\.gem/.match(filename).captures
+      (hash[name] ||= []) << ver
+    }
+    .transform_values {|vers| vers.sort {to_ver_str[_1] <=> to_ver_str[_2]}.max}
+
+  gems.each do |name, ver|
+    sh %( gem unpack --target=#{RUBY_DIR}/ext/ #{RUBY_DIR}/gems/#{name}-#{ver}.gem )
+    sh %( cp -r #{RUBY_DIR}/ext/#{name}-#{ver}/lib/* #{RUBY_DIR}/lib/ )
+  end
+
+  # disable the bundled gems mechanism
+  File.write "#{RUBY_DIR}/gems/bundled_gems", ''
+  sh %( rm -rf #{RUBY_DIR}/gems/*.gem )
+
+  # avoid duplication of prism sources between embedded and gem versions
+  Dir.glob "#{RUBY_DIR}/ext/prism-*/**/*.{c,h}" do |path|
+    # avoid duplicated symbols
+    modify_file path do |src|
+      src
+        .gsub(/([^\w])(pm_[a-z_]+)/) {"#{$1}gem_#{$2}"}
+        .gsub(/gem_(pm_[a-z_]+)\.h/) {"#{$1}.h"}
+    end
+  end
+  modify_file "#{RUBY_DIR}/prism_init.c" do |src|
+    # avoid duplicate registration of 'prism/prism.so'
+    src.sub /^.*prism\/prism\.so.*$/, ''
+  end
+end
+
+file GEMS_TOUCH => GEMS_DIR do
+  sh %( bundle install )
+  sh %( touch #{GEMS_TOUCH} )
+end
+
 file OSSL_CUSTOM_CONF do
   sdk_path = -> sdk {xcrun sdk, '--show-sdk-path'}
 
@@ -316,9 +358,15 @@ file OUTPUT_RUBY_H => [RUBY_CONFIGURE, OUTPUT_INC_DIR, NATIVE_RUBY_BIN] do
   end
 end
 
-file OUTPUT_RBCONFIG_RB => [RUBY_CONFIGURE, OUTPUT_LIB_RBCONFIG_DIR, NATIVE_RUBY_BIN] do
+file OUTPUT_RBCONFIG_RB => [
+  RUBY_CONFIGURE, OUTPUT_LIB_DATA_DIR, OUTPUT_LIB_RBCONFIG_DIR, NATIVE_RUBY_BIN
+] do
   lib_dir      = rbconfig NATIVE_RUBY_BIN, :rubylibprefix
   lib_arch_dir = rbconfig NATIVE_RUBY_BIN, :rubyarchdir
+
+  Dir.glob "#{RUBY_DIR}/ext/*/data" do |data_dir|
+    sh %( cp -r #{data_dir}/* #{OUTPUT_LIB_DATA_DIR} )
+  end
 
   write_file OUTPUT_RBCONFIG_RB, 'require "rbconfig-#{CRUBY_BUILD_SDK_AND_ARCH}"'
   sh %( cp -rf #{lib_dir}/* #{OUTPUT_LIB_DIR} )
