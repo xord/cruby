@@ -1,6 +1,9 @@
 NAME    = 'CRubyApp'
 PROJECT = 'project.yml'
 
+BUNDLE_DIR   = 'vendor/bundle'
+BUNDLE_TOUCH = "#{BUNDLE_DIR}/.touch"
+
 XCODEPROJ   = "#{NAME}.xcodeproj"
 XCWORKSPACE = "#{NAME}.xcworkspace"
 
@@ -13,7 +16,7 @@ end
 task :default => :test
 
 task :clobber => :clean do
-  sh %( rm -rf Pods #{XCODEPROJ} #{XCWORKSPACE} )
+  sh %( rm -rf Pods #{XCODEPROJ} #{XCWORKSPACE} #{BUNDLE_DIR} )
 end
 
 task :clean do
@@ -32,8 +35,13 @@ task :xcode => XCWORKSPACE do
   sh %( open #{XCWORKSPACE} )
 end
 
-file XCWORKSPACE => XCODEPROJ do
-  sh %( os=macos noprebuilt=1 pod install --verbose )
+file BUNDLE_TOUCH do
+  sh %( bundle install )
+  sh %( touch #{BUNDLE_TOUCH} )
+end
+
+file XCWORKSPACE => [XCODEPROJ, BUNDLE_TOUCH] do
+  sh %( os=macos noprebuilt=1 bundle exec pod install --verbose )
 end
 
 file XCODEPROJ => PROJECT do
