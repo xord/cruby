@@ -135,6 +135,7 @@ OUTPUT_RUBY_H  = "#{OUTPUT_INC_DIR}/ruby.h"
 
 OUTPUT_LIB_DIR          = "#{OUTPUT_DIR}/lib/ruby"
 OUTPUT_LIB_DATA_DIR     = "#{OUTPUT_LIB_DIR}/data"
+OUTPUT_LIB_CONFIG_DIR   = "#{OUTPUT_LIB_DIR}/config"
 OUTPUT_LIB_RBCONFIG_DIR = "#{OUTPUT_LIB_DIR}/rbconfig"
 OUTPUT_RBCONFIG_RB      = "#{OUTPUT_LIB_RBCONFIG_DIR}/rbconfig.rb"
 
@@ -169,6 +170,7 @@ directory BUILD_DIR
 directory OUTPUT_DIR
 directory OUTPUT_INC_DIR
 directory OUTPUT_LIB_DATA_DIR
+directory OUTPUT_LIB_CONFIG_DIR
 directory OUTPUT_LIB_RBCONFIG_DIR
 
 [
@@ -359,13 +361,21 @@ file OUTPUT_RUBY_H => [RUBY_CONFIGURE, OUTPUT_INC_DIR, NATIVE_RUBY_BIN] do
 end
 
 file OUTPUT_RBCONFIG_RB => [
-  RUBY_CONFIGURE, OUTPUT_LIB_DATA_DIR, OUTPUT_LIB_RBCONFIG_DIR, NATIVE_RUBY_BIN
+  RUBY_CONFIGURE,
+  OUTPUT_LIB_DATA_DIR,
+  OUTPUT_LIB_CONFIG_DIR,
+  OUTPUT_LIB_RBCONFIG_DIR,
+  NATIVE_RUBY_BIN
 ] do
   lib_dir      = rbconfig NATIVE_RUBY_BIN, :rubylibprefix
   lib_arch_dir = rbconfig NATIVE_RUBY_BIN, :rubyarchdir
 
-  Dir.glob "#{RUBY_DIR}/ext/*/data" do |data_dir|
-    sh %( cp -r #{data_dir}/* #{OUTPUT_LIB_DATA_DIR} )
+  Dir.glob "#{RUBY_DIR}/ext/*/data" do |dir|
+    sh %( cp -r #{dir}/* #{OUTPUT_LIB_DATA_DIR} )
+  end
+
+  Dir.glob "#{RUBY_DIR}/ext/*/config" do |dir|
+    sh %( cp -r #{dir}/* #{OUTPUT_LIB_CONFIG_DIR} )
   end
 
   write_file OUTPUT_RBCONFIG_RB, 'require "rbconfig-#{CRUBY_BUILD_SDK_AND_ARCH}"'
