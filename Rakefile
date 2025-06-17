@@ -260,6 +260,10 @@ file RUBY_CONFIGURE do
       #endif
     TO
   end
+
+  modify_file "#{RUBY_DIR}/ext/socket/raddrinfo.c" do |s|
+    "#define GETADDRINFO_IMPL 1\n" + s
+  end
 end
 
 file RUBY_CONFIGURE => GEMS_TOUCH do
