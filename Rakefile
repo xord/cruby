@@ -201,6 +201,7 @@ file RUBY_CONFIGURE do
       void CRuby_init (void (*init_prelude)(), bool yjit)
       {
         ruby_init();
+        ruby_mn_threads_params();
 
         ruby_cmdline_options_t opt;
         cmdline_options_init(&opt);
@@ -259,10 +260,6 @@ file RUBY_CONFIGURE do
         __builtin___clear_cache(start, end);
       #endif
     TO
-  end
-
-  modify_file "#{RUBY_DIR}/ext/socket/raddrinfo.c" do |s|
-    "#define GETADDRINFO_IMPL 1\n" + s
   end
 end
 
