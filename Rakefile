@@ -201,7 +201,6 @@ file RUBY_CONFIGURE do
       void CRuby_init (void (*init_prelude)(), bool yjit)
       {
         ruby_init();
-        ruby_mn_threads_params();
 
         ruby_cmdline_options_t opt;
         cmdline_options_init(&opt);
@@ -212,10 +211,17 @@ file RUBY_CONFIGURE do
           opt.yjit = yjit;
         #endif
 
+        ruby_mn_threads_params();
         Init_ruby_description(&opt);
+        ruby_gc_set_params();
+        ruby_init_loadpath();
+
         Init_enc();
         Init_ext();
         Init_extra_exts();
+        rb_enc_set_default_external(rb_enc_from_encoding(rb_locale_encoding()));
+        rb_enc_set_default_internal(Qnil);
+
         if (init_prelude) init_prelude();
         #if RUBY_API_VERSION_MAJOR >= 3
           rb_call_builtin_inits();
@@ -227,6 +233,8 @@ file RUBY_CONFIGURE do
         #endif
 
         rb_jit_cont_init();
+
+        rb_stdio_set_default_encoding();
       }
     EOS
   end
