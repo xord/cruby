@@ -35,7 +35,9 @@ task :xcode => XCWORKSPACE do
   sh %( open #{XCWORKSPACE} )
 end
 
-file BUNDLE_TOUCH do
+directory BUNDLE_DIR
+
+file BUNDLE_TOUCH => BUNDLE_DIR do
   sh %( bundle install )
   sh %( touch #{BUNDLE_TOUCH} )
 end
