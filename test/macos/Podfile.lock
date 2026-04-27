@@ -1,5 +1,5 @@
 PODS:
-  - CRuby (3.4.0)
+  - CRuby (3.4.100)
 
 DEPENDENCIES:
   - CRuby (from `../..`)
@@ -9,7 +9,7 @@ EXTERNAL SOURCES:
     :path: "../.."
 
 SPEC CHECKSUMS:
-  CRuby: aa2ca81179d6a0a613bee5f57cfc869af111b630
+  CRuby: 457ffe002b4c6f3e3244c49a45aa47f0c5bc7164
 
 PODFILE CHECKSUM: ef38c7669bac50017d18e59acf64973dd97ae276
 
