@@ -2,9 +2,11 @@
 
 platform :macos, '11.0'
 
-%w[CRubyApp CRubyAppTests].each do |t|
-  target t do
-    pod 'CRuby', path: '../..'
+target 'CRubyApp' do
+  pod 'CRuby', path: '../..'
+
+  target 'CRubyAppTests' do
+    inherit! :search_paths
   end
 end
 
@@ -18,6 +20,17 @@ post_install do |installer|
       HEADER_SEARCH_PATHS:          '$SRCROOT/../../../CRuby/include',
       GCC_PREPROCESSOR_DEFINITIONS: '$(inherited) COCOAPODS=1 CRUBY_TEST=1'
     }.each {|k, v| c.build_settings[k.to_s] = v.to_s}
+  end
+
+  # Remove library flags from test target xcconfig to avoid duplicate symbols;
+  # the test bundle inherits them from the host app via bundle_loader.
+  test_xcconfigs = Dir.glob('Pods/Target Support Files/Pods-CRubyAppTests/*.xcconfig')
+  test_xcconfigs.each do |path|
+    content = File.read(path)
+    content.gsub!(/ -l"ruby-static"/, '')
+    content.gsub!(/ -l"z"/, '')
+    content.gsub!(/ -l"CRuby"/, '')
+    File.write(path, content)
   end
 end
 

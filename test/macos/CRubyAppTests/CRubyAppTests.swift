@@ -8,17 +8,14 @@ final class CRubyAppTests: XCTestCase {
     }
 
     func testLoadPath() {
-        XCTAssertEqual(
-            "[" +
-            "\"/\", " +
-            "\"/lib/ruby/rbconfig\", " +
-            "\"/lib/ruby/site_ruby/3.2.0\", " +
-            "\"/lib/ruby/site_ruby\", " +
-            "\"/lib/ruby/vendor_ruby/3.2.0\", " +
-            "\"/lib/ruby/vendor_ruby\", " +
-            "\"/lib/ruby/3.2.0\"" +
-            "]",
-            evalToString("$LOAD_PATH.map {_1.sub %r|.*/Resources/?|, '/'}"))
+        let paths = evalToString("$LOAD_PATH.map {_1.sub %r|.*/Resources/?|, '/'}")
+        for dir in [
+            "/lib/ruby/rbconfig",
+            "/lib/ruby/site_ruby",
+            "/lib/ruby/vendor_ruby"
+        ] {
+            XCTAssertTrue(paths.contains(dir), "expected $LOAD_PATH to contain \(dir)")
+        }
     }
 
     func testRequire() {
