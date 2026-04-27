@@ -9,7 +9,7 @@ XCWORKSPACE = "#{NAME}.xcworkspace"
 
 
 def xcodebuild(workspace = XCWORKSPACE)
-  "xcodebuild -workspace #{workspace} -scheme #{NAME}"
+  "xcodebuild -workspace #{workspace} -scheme #{NAME} -destination 'platform=macOS,arch=arm64'"
 end
 
 
