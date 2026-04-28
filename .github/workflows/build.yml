@@ -10,6 +10,9 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2
 
+      - name: xcode
+        run: xcodebuild -version
+
       - name: ruby 3.3
         uses: ruby/setup-ruby@v1
         with:
