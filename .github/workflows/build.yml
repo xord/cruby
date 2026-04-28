@@ -18,6 +18,9 @@ jobs:
         with:
           ruby-version: 3.3
 
+      - name: setup xcodegen
+        run: brew install xcodegen
+
       - name: setup rust
         uses: actions-rs/toolchain@v1
         with:
