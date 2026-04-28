@@ -9,10 +9,10 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - name: ruby 3.2
+      - name: ruby 3.3
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 3.2
+          ruby-version: 3.3
 
       - name: setup rust
         uses: actions-rs/toolchain@v1
