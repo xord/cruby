@@ -37,3 +37,6 @@ jobs:
         run: |
           find CRuby/ -iname '*.a' | xargs ls -lh
           find CRuby/ -iname '*.a' | xargs lipo -info
+
+      - name: test
+        run: rake test
