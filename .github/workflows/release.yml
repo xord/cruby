@@ -21,15 +21,8 @@ jobs:
         run: xcodebuild -version
 
       - name: setup rust
-        uses: actions-rs/toolchain@v1
-        with:
-          profile:   minimal
-          toolchain: stable
-          default:   true
-          override:  true
-
-      - name: setup rust targets
         run: |
+          rustup update stable
           rustup target list | grep apple | grep -v '(installed)' | xargs rustup target add
 
       - name: checkout
