@@ -49,22 +49,6 @@ jobs:
           echo path=$(ruby -e 'print Dir.glob("CRuby_prebuilt-*.tar.gz").first') >> $GITHUB_OUTPUT
 
       - name: create github release
-        id: release
-        uses: actions/create-release@v1
+        run: gh release create ${{ github.ref_name }} ${{ steps.archive.outputs.path }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: ${{ github.ref }}
-          draft: false
-          prerelease: false
-
-      - name: upload to github release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.release.outputs.upload_url }}
-          asset_path: ./${{ steps.archive.outputs.path }}
-          asset_name:   ${{ steps.archive.outputs.path }}
-          asset_content_type: application/zip
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
