@@ -33,7 +33,7 @@ jobs:
           rustup target list | grep apple | grep -v '(installed)' | xargs rustup target add
 
       - name: checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: build
         run: |
