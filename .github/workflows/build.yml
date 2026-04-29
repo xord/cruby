@@ -13,10 +13,10 @@ jobs:
       - name: xcode
         run: xcodebuild -version
 
-      - name: ruby 3.4
+      - name: ruby 3.3
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: 3.4
+          ruby-version: 3.3
 
       - name: setup xcodegen
         run: brew install xcodegen
