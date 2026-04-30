@@ -202,6 +202,9 @@ file RUBY_CONFIGURE do
       {
         ruby_init();
 
+        // Disable Prism parser; crashes in iseq compile on Ruby 3.4.x
+        rb_ruby_default_parser_set(RB_DEFAULT_PARSER_PARSE_Y);
+
         ruby_cmdline_options_t opt;
         cmdline_options_init(&opt);
 
