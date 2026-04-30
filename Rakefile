@@ -202,9 +202,6 @@ file RUBY_CONFIGURE do
       {
         ruby_init();
 
-        // Disable Prism parser; crashes in iseq compile on Ruby 3.4.x
-        rb_ruby_default_parser_set(RB_DEFAULT_PARSER_PARSE_Y);
-
         ruby_cmdline_options_t opt;
         cmdline_options_init(&opt);
 
@@ -517,6 +514,7 @@ TARGETS.each do |os, sdk, archs|
             --with-static-linked-ext
             --with-openssl-dir=#{ossl_install_dir}
             --with-libyaml-dir=#{yaml_install_dir}
+            --with-parser=parse.y
           ]
           opts += enables.map  {|s| "--enable-#{s}"}
           opts += disables.map {|s| "--disable-#{s}"}
