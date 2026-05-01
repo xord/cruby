@@ -223,15 +223,21 @@ file RUBY_CONFIGURE do
         rb_enc_set_default_external(rb_enc_from_encoding(rb_locale_encoding()));
         rb_enc_set_default_internal(Qnil);
 
-        if (init_prelude) init_prelude();
         #if RUBY_API_VERSION_MAJOR >= 3
+          GET_VM()->running = 0;
           rb_call_builtin_inits();
+          GET_VM()->running = 1;
+          memset(ruby_vm_redefined_flag, 0, sizeof(ruby_vm_redefined_flag));
         #endif
         Init_builtin_features();
+        rb_const_remove(rb_cObject, rb_intern_const("TMP_RUBY_PREFIX"));
+        if (init_prelude) init_prelude();
 
         #if USE_YJIT
           rb_yjit_init(opt.yjit);
         #endif
+        void Init_builtin_yjit_hook();
+        Init_builtin_yjit_hook();
 
         rb_jit_cont_init();
 
