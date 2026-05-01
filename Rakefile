@@ -283,7 +283,6 @@ file RUBY_CONFIGURE => GEMS_TOUCH do
   # directory structure as the standard library
 
   sh %( rm -rf #{RUBY_DIR}/.bundle/gems/* )
-  sh %( rm -rf #{RUBY_DIR}/lib/prism* )
 
   rubyver     = rbconfig('ruby', :ruby_version)
   locked_gems = Dir.glob("#{GEMS_DIR}/ruby/#{rubyver}/cache/*.gem")
@@ -521,7 +520,6 @@ TARGETS.each do |os, sdk, archs|
             --with-static-linked-ext
             --with-openssl-dir=#{ossl_install_dir}
             --with-libyaml-dir=#{yaml_install_dir}
-            --with-parser=parse.y
           ]
           opts += enables.map  {|s| "--enable-#{s}"}
           opts += disables.map {|s| "--disable-#{s}"}
