@@ -200,6 +200,7 @@ file RUBY_CONFIGURE do
     s + <<~EOS
       void CRuby_init (void (*init_prelude)(), bool yjit)
       {
+        RUBY_INIT_STACK;
         ruby_init();
 
         ruby_cmdline_options_t opt;
