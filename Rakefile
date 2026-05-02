@@ -212,6 +212,13 @@ file RUBY_CONFIGURE do
           opt.yjit = yjit;
         #endif
 
+        if (FEATURE_SET_P(opt.features, gems)) {
+          rb_define_module("Gem");
+          if (opt.features.set & FEATURE_BIT(error_highlight)) rb_define_module("ErrorHighlight");
+          if (opt.features.set & FEATURE_BIT(did_you_mean))    rb_define_module("DidYouMean");
+          if (opt.features.set & FEATURE_BIT(syntax_suggest))  rb_define_module("SyntaxSuggest");
+        }
+
         ruby_mn_threads_params();
         Init_ruby_description(&opt);
         ruby_gc_set_params();
