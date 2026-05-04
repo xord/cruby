@@ -562,6 +562,7 @@ TARGETS.each do |os, sdk, archs|
           opts += enables.map  {|s| "--enable-#{s}"}
           opts += disables.map {|s| "--disable-#{s}"}
           opts += withouts.map {|s| "--without-#{s}"}
+          opts << "--with-out-ext=#{withouts.map {|s| "#{s}*"}.join ','}"
           opts += nofuncs .map {|s| "ac_cv_func_#{s}=no"} if ios
           opts << "--with-arch=#{arch}" unless arm
           opts << "--with-baseruby=#{BASE_RUBY}" if BASE_RUBY
