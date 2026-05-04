@@ -237,14 +237,28 @@ file RUBY_CONFIGURE do
           memset(ruby_vm_redefined_flag, 0, sizeof(ruby_vm_redefined_flag));
         #endif
         Init_builtin_features();
-        rb_const_remove(rb_cObject, rb_intern_const("TMP_RUBY_PREFIX"));
+        #if RUBY_API_VERSION_MAJOR < 4
+          rb_const_remove(rb_cObject, rb_intern_const("TMP_RUBY_PREFIX"));
+        #endif
         if (init_prelude) init_prelude();
+
+        #if RUBY_API_VERSION_MAJOR >= 4
+          if (rb_box_available())
+            rb_initialize_main_box();
+          rb_box_init_done();
+        #endif
 
         #if USE_YJIT
           rb_yjit_init(opt.yjit);
         #endif
-        void Init_builtin_yjit_hook();
-        Init_builtin_yjit_hook();
+        #if USE_ZJIT
+          extern void rb_zjit_init(bool);
+          rb_zjit_init(opt.zjit);
+        #endif
+        #if RUBY_API_VERSION_MAJOR < 4
+          void Init_builtin_yjit_hook();
+          Init_builtin_yjit_hook();
+        #endif
 
         rb_jit_cont_init();
 
@@ -264,6 +278,23 @@ file RUBY_CONFIGURE do
         int r = -1;
       #endif
     TO
+  end
+
+  # psych picks Homebrew's libyaml via pkg_config('yaml-0.1') before
+  # honoring --with-libyaml-dir, causing arch mismatches on cross builds.
+  # Disable the pkg_config branch so the dir_config fallback wins.
+  modify_file "#{RUBY_DIR}/ext/psych/extconf.rb" do |s|
+    s.gsub(/elsif\s+pkg_config\(['"]yaml-[\d.]+['"]\)/, "elsif false")
+  end
+
+  # macOS dtrace rejects cc-only flags like -pipe -Os -isysroot
+  # (passed via $(CPPFLAGS)); probes.d only includes vm_opts.h
+  # which has no system header deps, so $(INCFLAGS) alone suffices.
+  modify_file "#{RUBY_DIR}/template/Makefile.in" do |s|
+    s.gsub(
+      '$(DTRACE) -o $@.tmp -h -C $(INCFLAGS) $(CPPFLAGS) -s $<',
+      '$(DTRACE) -o $@.tmp -h -C $(INCFLAGS) -s $<'
+    )
   end
 
   # use sys_icache_invalidate() on iphoneos
@@ -540,7 +571,7 @@ TARGETS.each do |os, sdk, archs|
           modify_file makefile do |s|
             # avoid link error on linking exe/ruby
             s = s.gsub /^.*PROGRAM.*:.*exe\/.*PROGRAM.*$/, ''
-            s += "$(LIBRUBY_A): $(YJIT_LIBS)" if yjit
+            s += "$(LIBRUBY_A): $(YJIT_LIBS)" if yjit && CRuby.ruby_version.first < 4
             s
           end
         end
@@ -671,15 +702,20 @@ namespace :native do
   ossl_dir         = "#{NATIVE_BUILD_DIR}/openssl"
   ossl_install_dir = "#{NATIVE_BUILD_DIR}/openssl-install"
   ossl_lib         = "#{ossl_install_dir}/lib/libssl.a"
+  yaml_dir         = "#{NATIVE_BUILD_DIR}/libyaml"
+  yaml_install_dir = "#{NATIVE_BUILD_DIR}/libyaml-install"
+  yaml_lib         = "#{yaml_install_dir}/lib/libyaml.a"
 
   directory ruby_dir
   directory ossl_dir
+  directory yaml_dir
 
-  file NATIVE_RUBY_BIN => [RUBY_CONFIGURE, ruby_dir, ossl_lib] do
+  file NATIVE_RUBY_BIN => [RUBY_CONFIGURE, ruby_dir, ossl_lib, yaml_lib] do
     chdir ruby_dir do
       opts = {
         'prefix'           => NATIVE_RUBY_INSTALL_DIR,
-        'with-openssl-dir' => ossl_install_dir
+        'with-openssl-dir' => ossl_install_dir,
+        'with-libyaml-dir' => yaml_install_dir
       }.map {|k, v| "--#{k}=#{v}"}
       sh %( #{RUBY_CONFIGURE} #{opts.join ' '} --disable-install-doc )
       sh %( make -j -s )
@@ -692,6 +728,14 @@ namespace :native do
       sh %( #{OSSL_DIR}/config --prefix=#{ossl_install_dir} )
       sh %( make -j -s )
       sh %( make -s install_sw )
+    end
+  end
+
+  file yaml_lib => [YAML_CONFIGURE, yaml_dir] do
+    chdir yaml_dir do
+      sh %( #{YAML_CONFIGURE} --prefix=#{yaml_install_dir} --enable-static --disable-shared )
+      sh %( make -j -s )
+      sh %( make -s install )
     end
   end
 end# native
