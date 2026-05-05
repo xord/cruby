@@ -5,8 +5,8 @@ POD_VERSION = 0
 
 GITHUB_URL  = "https://github.com/xord/cruby"
 
-RUBY_URL    = 'https://cache.ruby-lang.org/pub/ruby/4.0/ruby-4.0.0.tar.gz'
-RUBY_SHA256 = '2e8389c8c072cb658c93a1372732d9eac84082c88b065750db1e52a5ac630271'
+RUBY_URL    = 'https://cache.ruby-lang.org/pub/ruby/4.0/ruby-4.0.1.tar.gz'
+RUBY_SHA256 = '3924be2d05db30f4e35f859bf028be85f4b7dd01714142fd823e4af5de2faf9d'
 
 OSSL_URL    = 'https://github.com/openssl/openssl/releases/download/openssl-3.4.1/openssl-3.4.1.tar.gz'
 OSSL_SHA256 = '002a2d6b30b58bf4bea46c43bdd96365aaf8daa6c428782aa4feee06da197df3'
