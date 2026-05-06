@@ -23,6 +23,17 @@ final class CRubyAppTests: XCTestCase {
         XCTAssertFalse(evalToBool("require 'stringio'"))
     }
 
+    func testHttpsRequest() {
+        let code = evalToString("""
+            ENV['SSL_CERT_FILE'] = '/etc/ssl/cert.pem'
+            require 'net/http'
+            require 'uri'
+            uri = URI('https://www.example.com/')
+            Net::HTTP.get_response(uri).code
+        """)
+        XCTAssertEqual("200", code)
+    }
+
     private func eval(_ str: String) -> CRBValue {
         CRuby.evaluate(str)
     }
