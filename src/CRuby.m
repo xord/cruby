@@ -49,7 +49,7 @@ static BOOL gYJIT = NO;
 	gExtensions = [[NSMutableDictionary alloc] init];
 
 	void CRuby_init(void (*)(), bool);
-	#ifdef CRUBY_TEST
+	#if RUBY_API_VERSION_MAJOR >= 3
 		void* Init_prelude = NULL;
 	#else
 		void Init_prelude();

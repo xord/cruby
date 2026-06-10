@@ -18,7 +18,7 @@ post_install do |installer|
       VALID_ARCHS:                  :arm64,
       ENABLE_BITCODE:               :NO,
       HEADER_SEARCH_PATHS:          '$SRCROOT/../../../CRuby/include',
-      GCC_PREPROCESSOR_DEFINITIONS: '$(inherited) COCOAPODS=1 CRUBY_TEST=1'
+      GCC_PREPROCESSOR_DEFINITIONS: '$(inherited) COCOAPODS=1'
     }.each {|k, v| c.build_settings[k.to_s] = v.to_s}
   end
 
