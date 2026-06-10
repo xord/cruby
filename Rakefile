@@ -652,6 +652,7 @@ TARGETS.each do |os, sdk, archs|
         .map {|dir| Dir.glob "#{dir}/**/*.a"}
         .flatten
         .reject {|path| excludes.any? {|s| path.include? s}}
+        .reject {_1 =~ %r|/target/.+/libruby\.a$|} # rust staticlibs are already prelinked into libruby.o
         .each do |a_path|
 
         a_dir    = a_path[%r|#{build_arch_dir}/(.+)\.a$|, 1]
@@ -678,6 +679,8 @@ TARGETS.each do |os, sdk, archs|
       chdir build_arch_dir do
         objs = Dir.glob("#{extract_dir}/**/*.o")
           .reject {|path| excludes.any? {|s| path.include? s}}
+        raise "rust staticlib objs leaked" if objs.any? {_1.end_with? '.rcgu.o'}
+
         sh %( ar -crs #{arch_lib_file} #{objs.join ' '} #{extra_objs.join ' '} )
       end
     end
