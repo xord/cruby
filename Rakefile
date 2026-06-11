@@ -537,7 +537,8 @@ TARGETS.each do |os, sdk, archs|
 
           enables  = yjit ? %w[jit-support yjit] : []
           disables = %w[shared dln install-doc]
-          withouts = %w[fiddle bigdecimal readline]
+          withouts = %w[bigdecimal readline]
+          withouts << 'fiddle' if ios # to pass the App Store review
           nofuncs  = %w[backtrace system syscall __syscall getentropy dup3 pipe2]
 
           envs = {
