@@ -446,6 +446,8 @@ end
 
 desc "download prebuilt binary or build all"
 task :download_or_build => PREBUILT_ARCHIVE do
+  next if File.exist? OUTPUT_XCFRAMEWORK_INFO_PLIST
+
   if File.exist?(PREBUILT_ARCHIVE)
     sh %( tar xzf #{PREBUILT_ARCHIVE} )
   else
