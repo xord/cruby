@@ -1,5 +1,6 @@
 # -*- mode: ruby -*-
 
+require 'digest'
 require 'open-uri'
 require_relative 'config'
 
@@ -43,6 +44,12 @@ end
 def download (url, path)
   puts "downloading '#{url}'..."
   write_file path, URI.open(url) {|f| f.read}
+end
+
+def verify_sha256 (path, sha256)
+  digest = Digest::SHA256.file(path).hexdigest
+  raise "SHA256 mismatch for '#{path}': expected #{sha256} but got #{digest}" if
+    digest != sha256
 end
 
 def chdir (dir = RUBY_DIR, &block)
@@ -166,10 +173,10 @@ directory OUTPUT_LIB_CONFIG_DIR
 directory OUTPUT_LIB_RBCONFIG_DIR
 
 [
-  [RUBY_DIR, RUBY_URL, RUBY_ARCHIVE, RUBY_CONFIGURE],
-  [OSSL_DIR, OSSL_URL, OSSL_ARCHIVE, OSSL_CONFIGURE],
-  [YAML_DIR, YAML_URL, YAML_ARCHIVE, YAML_CONFIGURE]
-].each do |dir, url, archive, configure|
+  [RUBY_DIR, RUBY_URL, RUBY_SHA256, RUBY_ARCHIVE, RUBY_CONFIGURE],
+  [OSSL_DIR, OSSL_URL, OSSL_SHA256, OSSL_ARCHIVE, OSSL_CONFIGURE],
+  [YAML_DIR, YAML_URL, YAML_SHA256, YAML_ARCHIVE, YAML_CONFIGURE]
+].each do |dir, url, sha256, archive, configure|
   task :clobber do
     sh %( rm -rf #{archive} #{dir} )
   end
@@ -181,6 +188,7 @@ directory OUTPUT_LIB_RBCONFIG_DIR
   end
 
   file configure => [dir, archive] do
+    verify_sha256 archive, sha256
     sh %( tar xzf #{archive} --directory=#{dir} --strip=1 )
     sh %( touch #{configure} )
   end

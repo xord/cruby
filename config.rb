@@ -12,6 +12,7 @@ OSSL_URL    = 'https://github.com/openssl/openssl/releases/download/openssl-3.6.
 OSSL_SHA256 = '243a86649cf6f23eeb6a2ff2456e09e5d77dd9018a54d3d96b0c6bdd6ba6c7f1'
 
 YAML_URL    = 'https://github.com/yaml/libyaml/releases/download/0.2.5/yaml-0.2.5.tar.gz'
+YAML_SHA256 = 'c642ae9b75fee120b2d96c712538bd2cf283228d2337df2cf2988e3c02678ef4'
 
 
 module CRuby
