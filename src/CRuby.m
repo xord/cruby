@@ -2,7 +2,6 @@
 #import "CRubyConfig.h"
 #import "CRBValue.h"
 #include <ruby.h>
-#include <ruby/version.h>
 
 
 #ifndef TAG_RAISE
@@ -46,13 +45,8 @@ static BOOL gYJIT = NO;
 	if (done) return;
 	done = YES;
 
-	void CRuby_init(void (*)(), bool);
-	#if RUBY_API_VERSION_MAJOR >= 3
-		void* Init_prelude = NULL;
-	#else
-		void Init_prelude();
-	#endif
-	CRuby_init(Init_prelude, gYJIT);
+	void CRuby_init(bool);
+	CRuby_init(gYJIT);
 
 	NSBundle* bundle = [NSBundle bundleForClass:CRuby.class];
 	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/" CRUBY_LIB_DIR_VERSION];

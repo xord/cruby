@@ -53,14 +53,6 @@ def xcrun (sdk, param)
   `xcrun --sdk #{sdk} #{param}`.chomp
 end
 
-def version_string (major, minor = 0, patch = 0)
-  [major, minor, patch].map {|n| "%03d" % n}.join
-end
-
-def ruby25_or_higher? ()
-  version_string(*CRuby.ruby_version) >= version_string(2, 5)
-end
-
 def rbconfig(rubybin, key)
   `#{rubybin} -rrbconfig -e 'print RbConfig::CONFIG["#{key}"]'`
     .tap {|value| raise "Failed to get RbConfig value for '#{key}'" if value.empty?}
@@ -198,7 +190,9 @@ file RUBY_CONFIGURE do
   # append 'CRuby_init()' func to ruby.c
   modify_file "#{RUBY_DIR}/ruby.c" do |s|
     s + <<~EOS
-      void CRuby_init (void (*init_prelude)(), bool yjit)
+      // Mimics ruby_opt_init() (and the surrounding process_options() path)
+      // for embedding; keep the call order in sync with ruby.c on version ups.
+      void CRuby_init (bool yjit)
       {
         RUBY_INIT_STACK;
         ruby_init();
@@ -212,42 +206,63 @@ file RUBY_CONFIGURE do
           opt.yjit = yjit;
         #endif
 
-        if (FEATURE_SET_P(opt.features, gems)) {
-          rb_define_module("Gem");
-          if (opt.features.set & FEATURE_BIT(error_highlight)) rb_define_module("ErrorHighlight");
-          if (opt.features.set & FEATURE_BIT(did_you_mean))    rb_define_module("DidYouMean");
-          if (opt.features.set & FEATURE_BIT(syntax_suggest))  rb_define_module("SyntaxSuggest");
-        }
-
         ruby_mn_threads_params();
         Init_ruby_description(&opt);
         ruby_gc_set_params();
         ruby_init_loadpath();
 
         Init_enc();
-        Init_ext();
-        Init_extra_exts();
         rb_enc_set_default_external(rb_enc_from_encoding(rb_locale_encoding()));
         rb_enc_set_default_internal(Qnil);
 
-        #if RUBY_API_VERSION_MAJOR >= 3
-          GET_VM()->running = 0;
-          rb_call_builtin_inits();
-          GET_VM()->running = 1;
-          memset(ruby_vm_redefined_flag, 0, sizeof(ruby_vm_redefined_flag));
-        #endif
-        Init_builtin_features();
-        #if RUBY_API_VERSION_MAJOR < 4
-          rb_const_remove(rb_cObject, rb_intern_const("TMP_RUBY_PREFIX"));
-        #endif
-        if (init_prelude) init_prelude();
+        Init_ext();
+        Init_extra_exts();
 
-        #if RUBY_API_VERSION_MAJOR >= 4
+        GET_VM()->running = 0;
+        rb_call_builtin_inits();
+        GET_VM()->running = 1;
+        memset(ruby_vm_redefined_flag, 0, sizeof(ruby_vm_redefined_flag));
+
+        // register JIT-optimized builtin CMEs before the prelude
+        #if USE_YJIT
+          rb_yjit_init_builtin_cmes();
+        #endif
+        #if USE_ZJIT
+          extern void rb_zjit_init_builtin_cmes(void);
+          rb_zjit_init_builtin_cmes();
+        #endif
+
+        // initialize the root/main boxes before running RubyGems (gem_prelude)
+        if (rb_box_available())
+          rb_initialize_mandatory_boxes();
+        rb_box_init_done();
+
+        if (FEATURE_SET_P(opt.features, gems))
+        {
+          rb_box_gem_flags_t gem_flags =
+          {
+            .gem             = FEATURE_SET_P(opt.features, gems),
+            .error_highlight = opt.features.set & FEATURE_BIT(error_highlight),
+            .did_you_mean    = opt.features.set & FEATURE_BIT(did_you_mean),
+            .syntax_suggest  = opt.features.set & FEATURE_BIT(syntax_suggest)
+          };
           if (rb_box_available())
-            rb_initialize_main_box();
-          rb_box_init_done();
-        #endif
+          {
+            rb_vm_call_cfunc_in_box(
+              Qnil, rb_define_gem_modules, (VALUE) &gem_flags, Qnil,
+              rb_str_new_cstr("before_prelude.root.dummy"), rb_root_box());
+            rb_vm_call_cfunc_in_box(
+              Qnil, rb_define_gem_modules, (VALUE) &gem_flags, Qnil,
+              rb_str_new_cstr("before_prelude.main.dummy"), rb_main_box());
+            rb_box_set_gem_flags(&gem_flags);
+          }
+          else
+            rb_define_gem_modules((VALUE)&gem_flags, Qnil);
+        }
 
+        Init_builtin_features();// == ruby_init_prelude()
+
+        // enable JITs after the prelude to avoid JITing prelude code
         #if USE_YJIT
           rb_yjit_init(opt.yjit);
         #endif
@@ -255,12 +270,6 @@ file RUBY_CONFIGURE do
           extern void rb_zjit_init(bool);
           rb_zjit_init(opt.zjit);
         #endif
-        #if RUBY_API_VERSION_MAJOR < 4
-          void Init_builtin_yjit_hook();
-          Init_builtin_yjit_hook();
-        #endif
-
-        rb_jit_cont_init();
 
         rb_stdio_set_default_encoding();
       }
@@ -478,7 +487,7 @@ TARGETS.each do |os, sdk, archs|
     ossl_install_dir = "#{build_arch_dir}/openssl-install"
     yaml_install_dir = "#{build_arch_dir}/libyaml-install"
 
-    libruby_ver = ruby25_or_higher? ? ".#{CRuby.ruby_version[0, 2].join '.'}" : ""
+    libruby_ver = ".#{CRuby.ruby_version[0, 2].join '.'}"
     libruby     = "#{ruby_dir}/libruby#{libruby_ver}-static.a"
     libossl     = "#{ossl_install_dir}/lib/libssl.a"
     libyaml     = "#{yaml_install_dir}/lib/libyaml.a"
@@ -574,9 +583,7 @@ TARGETS.each do |os, sdk, archs|
 
           modify_file makefile do |s|
             # avoid link error on linking exe/ruby
-            s = s.gsub /^.*PROGRAM.*:.*exe\/.*PROGRAM.*$/, ''
-            s += "$(LIBRUBY_A): $(YJIT_LIBS)" if yjit && CRuby.ruby_version.first < 4
-            s
+            s.gsub /^.*PROGRAM.*:.*exe\/.*PROGRAM.*$/, ''
           end
         end
       end
