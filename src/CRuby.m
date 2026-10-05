@@ -91,18 +91,27 @@ static BOOL gYJIT = NO;
 #endif
 }
 
-+ (BOOL)start:(NSString*)filename
++ (int)start:(NSString*)filename
 {
 	return [self start:filename rescue:^(CRBValue* exception) {
 		NSLog(@"Exception: %@", exception.inspect);
 	}];
 }
 
-+ (BOOL)start:(NSString*)filename rescue:(RescueBlock)rescue
++ (int)start:(NSString*)filename rescue:(RescueBlock)rescue
 {
-	BOOL ret = [self load:filename rescue:rescue];
+	__block int status = 0;
+	[self load:filename rescue:^(CRBValue* exception) {
+		if (RTEST(rb_obj_is_kind_of(exception.value, rb_eSystemExit)))
+			status = (int) [exception call:@"status"].toInteger;
+		else
+		{
+			status = 1;
+			if (rescue) rescue(exception);
+		}
+	}];
 	[self finalize];
-	return ret;
+	return status;
 }
 
 + (BOOL)load:(NSString*)filename

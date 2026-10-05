@@ -170,7 +170,7 @@ call (VALUE args)
 
 - (BOOL)isKindOf:(VALUE)type
 {
-	return rb_obj_is_kind_of(_value, type);
+	return RTEST(rb_obj_is_kind_of(_value, type)) ? YES : NO;
 }
 
 - (int)type

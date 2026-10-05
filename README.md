@@ -84,8 +84,8 @@ The pod exposes two Objective-C classes.
 ```objc
 @interface CRuby : NSObject
 
-+ (BOOL)start:(NSString*)filename;
-+ (BOOL)start:(NSString*)filename rescue:(RescueBlock)rescue;
++ (int)start:(NSString*)filename;
++ (int)start:(NSString*)filename rescue:(RescueBlock)rescue;
 
 + (BOOL)load:(NSString*)filename;
 + (BOOL)load:(NSString*)filename rescue:(RescueBlock)rescue;
@@ -103,7 +103,7 @@ The pod exposes two Objective-C classes.
 
 | Method                | Purpose                                                                       |
 | --------------------- | ----------------------------------------------------------------------------- |
-| `+start:`             | Boot the interpreter (once) and run the given Ruby file as the entry point   |
+| `+start:`             | Run the given Ruby file as the entry point and return its exit status         |
 | `+load:`              | `require`-style loading of an additional Ruby file                            |
 | `+evaluate:`          | Evaluate a Ruby source string; returns a `CRBValue`                           |
 | `+addLibrary:bundle:` | Register an extra `.bundle` resource directory as a Ruby load path            |
@@ -162,10 +162,19 @@ CRBValue *result = [CRuby evaluate:@"[1, 2, 3].map {|n| n ** 2}"];
 NSLog(@"result: %@", result.inspect);   // result: [1, 4, 9]
 ```
 
-### Boot a Ruby entry point and call into it
+### Run a Ruby entry point as the main program
 
 ```objc
-[CRuby start:@"main.rb" rescue:^(CRBValue *e) {
+int main (int argc, const char* argv[])
+{
+    return [CRuby start:@"main.rb"];
+}
+```
+
+### Load a Ruby file and call into it
+
+```objc
+[CRuby load:@"main.rb" rescue:^(CRBValue *e) {
     NSLog(@"ruby error: %@", e.inspect);
 }];
 

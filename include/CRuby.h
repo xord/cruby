@@ -7,8 +7,8 @@
 
 typedef void (^RescueBlock) (CRBValue* exception);
 
-+ (BOOL)start:(NSString*)filename;
-+ (BOOL)start:(NSString*)filename rescue:(RescueBlock)rescue;
++ (int)start:(NSString*)filename;
++ (int)start:(NSString*)filename rescue:(RescueBlock)rescue;
 
 + (BOOL)load:(NSString*)filename;
 + (BOOL)load:(NSString*)filename rescue:(RescueBlock)rescue;
