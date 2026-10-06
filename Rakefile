@@ -65,6 +65,10 @@ def rbconfig(rubybin, key)
     .tap {|value| raise "Failed to get RbConfig value for '#{key}'" if value.empty?}
 end
 
+def to_envs(hash)
+  hash.compact.map {|k, v| "#{k}='#{v}'"}.join ' '
+end
+
 def to_rust_target (os, sdk, arch)
   arch = arch.to_s.sub /^arm/, 'aarch'
   os   = {
@@ -93,6 +97,11 @@ TARGETS = [
     BUILD_TARGETS && !BUILD_TARGETS.include?("#{sdk}:#{arch}")
   }
 }.reject {|os, sdk, archs| BUILD_OS && os.to_s != BUILD_OS || archs.empty?}
+
+DEPLOY_TARGETS = {
+  macos: {MACOSX_DEPLOYMENT_TARGET: '11.0'},
+  ios: {IPHONEOS_DEPLOYMENT_TARGET: '14.0'}
+}
 
 ROOT_DIR   = __dir__
 INC_DIR    = "#{ROOT_DIR}/include"
@@ -479,8 +488,9 @@ end
 
 
 TARGETS.each do |os, sdk, archs|
-  sdk_root = xcrun sdk, '--show-sdk-path'
-  cc_dir   = File.dirname xcrun(sdk, '--find cc')
+  deploy_target = DEPLOY_TARGETS[os]
+  sdk_root      = xcrun sdk, '--show-sdk-path'
+  cc_dir        = File.dirname xcrun(sdk, '--find cc')
 
   build_dir       = "#{BUILD_DIR}/#{sdk}"
   output_dir      = "#{build_dir}/output"
@@ -516,8 +526,6 @@ TARGETS.each do |os, sdk, archs|
       flags        = "-pipe -Os #{isysroot}" # -gdwarf-2 -no-cpp-precomp -mthumb
 
       if "#{sdk}:#{arch}" == 'iphonesimulator:x86_64'
-        flags << " -miphoneos-version-min=10.0"
-
         # to skip checking macos version
         flags << " -DMAC_OS_X_VERSION_MIN_REQUIRED=MAC_OS_X_VERSION_10_5"
       end
@@ -560,7 +568,8 @@ TARGETS.each do |os, sdk, archs|
           withouts << 'fiddle' if ios # to pass the App Store review
           nofuncs  = %w[backtrace system syscall __syscall getentropy dup3 pipe2]
 
-          envs = {
+          envs = to_envs({
+            **deploy_target,
             PATH:     "#{cc_dir}:#{PATHS}",
             CC:       "clang -arch #{arch}",
             CPP:      "clang -arch #{arch} -E",
@@ -572,7 +581,7 @@ TARGETS.each do |os, sdk, archs|
             ASFLAGS:  "#{isysroot}",
             LDFLAGS:  "#{flags} -L#{sdk_root}/usr/lib -framework Security",
             RUSTC:    rustc_target&.then {|t| "rustc --target=#{t}"}
-          }.compact.map {|k, v| "#{k}='#{v}'"}.join ' '
+          })
           opts = %W[
             --host=#{host}
             --with-static-linked-ext
@@ -605,7 +614,7 @@ TARGETS.each do |os, sdk, archs|
 
       file libruby => [makefile, config_h] do
         chdir ruby_dir do
-          sh %( make -j -s )
+          sh %( #{to_envs deploy_target} make -j -s )
         end
       end
     end# ruby
@@ -616,9 +625,10 @@ TARGETS.each do |os, sdk, archs|
 
       file libossl => [OSSL_CONFIGURE, OSSL_CUSTOM_CONF, ossl_dir] do
         chdir ossl_dir do
-          envs = {
+          envs = to_envs({
+            **deploy_target,
             CROSS_COMPILE: "#{cc_dir}/"
-          }.map {|k, v| "#{k}='#{v}'"}.join ' '
+          })
           opts = %W[
             --prefix=#{ossl_install_dir}
             no-shared
@@ -637,9 +647,10 @@ TARGETS.each do |os, sdk, archs|
 
       file libyaml => [YAML_CONFIGURE, yaml_dir] do
         chdir yaml_dir do
-          envs = {
+          envs = to_envs({
+            **deploy_target,
             CC: "xcrun --sdk #{sdk} cc -arch #{arch}"
-          }.map {|k, v| "#{k}='#{v}'"}.join ' '
+          })
           opts = %W[
             --prefix=#{yaml_install_dir}
             --host=#{host}
