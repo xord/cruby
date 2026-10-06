@@ -11,10 +11,18 @@
 
 @interface CRuby ()
 
++ (void)setupLoadPath;
+
 + (BOOL)requireExtension:(NSString*)path;
 
 @end
 
+
+static void
+before_prelude ()
+{
+	[CRuby setupLoadPath];
+}
 
 static VALUE
 require_extension (int argc, VALUE* argv, VALUE self)
@@ -45,16 +53,8 @@ static BOOL gYJIT = NO;
 	if (done) return;
 	done = YES;
 
-	void CRuby_init(bool);
-	CRuby_init(gYJIT);
-
-	NSBundle* bundle = [NSBundle bundleForClass:CRuby.class];
-	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/" CRUBY_LIB_DIR_VERSION];
-	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/vendor_ruby"];
-	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/vendor_ruby/" CRUBY_LIB_DIR_VERSION];
-	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/site_ruby"];
-	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/site_ruby/" CRUBY_LIB_DIR_VERSION];
-	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/rbconfig"];
+	void CRuby_init(bool, void (*)());
+	CRuby_init(gYJIT, before_prelude);
 
 	VALUE mCRuby = rb_define_module("CRuby");
 	rb_define_module_function(mCRuby, "require_extension", require_extension, -1);
@@ -66,6 +66,17 @@ static BOOL gYJIT = NO;
 		"    CRuby.require_extension(*args) || cruby_require__(*args);"
 		"  end;"
 		"end"];
+}
+
++ (void)setupLoadPath
+{
+	NSBundle* bundle = [NSBundle bundleForClass:CRuby.class];
+	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/" CRUBY_LIB_DIR_VERSION];
+	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/vendor_ruby"];
+	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/vendor_ruby/" CRUBY_LIB_DIR_VERSION];
+	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/site_ruby"];
+	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/site_ruby/" CRUBY_LIB_DIR_VERSION];
+	[self addLibrary:@"CRuby" bundle:bundle dir:@"lib/ruby/rbconfig"];
 
 	[self eval: [NSString stringWithFormat:
 		@"Object.const_set(:CRUBY_BUILD_SDK_AND_ARCH, %@)",

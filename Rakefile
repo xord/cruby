@@ -209,7 +209,7 @@ file RUBY_CONFIGURE do
     s + <<~EOS
       // Mimics ruby_opt_init() (and the surrounding process_options() path)
       // for embedding; keep the call order in sync with ruby.c on version ups.
-      void CRuby_init (bool yjit)
+      void CRuby_init (bool yjit, void (*before_prelude)())
       {
         RUBY_INIT_STACK;
         ruby_init();
@@ -276,6 +276,9 @@ file RUBY_CONFIGURE do
           else
             rb_define_gem_modules((VALUE)&gem_flags, Qnil);
         }
+
+        if (before_prelude)
+          before_prelude();// setup load paths
 
         Init_builtin_features();// == ruby_init_prelude()
 
