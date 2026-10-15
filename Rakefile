@@ -473,20 +473,26 @@ file OUTPUT_ARCHIVE => :build do
   sh %( tar cvzf #{OUTPUT_ARCHIVE} #{OUTPUT_DIR.sub(ROOT_DIR + '/', '')} )
 end
 
-desc "download prebuilt binary or build all"
-task :download_or_build => PREBUILT_ARCHIVE do
+desc "download prebuilt binary"
+task :download => PREBUILT_ARCHIVE do
   next if File.exist? OUTPUT_XCFRAMEWORK_INFO_PLIST
+  raise "cannot download with noprebuilt=1" if NO_PREBUILT
+  sh %( tar xzf #{PREBUILT_ARCHIVE} )
+end
 
-  if File.exist?(PREBUILT_ARCHIVE)
-    sh %( tar xzf #{PREBUILT_ARCHIVE} )
-  else
-    sh %( rake build )
+desc "download prebuilt binary or build all"
+task :download_or_build do
+  begin
+    Rake::Task[:download].invoke unless NO_PREBUILT
+  rescue OpenURI::HTTPError => e
+    puts "failed to download, build instead: #{e.message}"
   end
+  sh %( rake build ) unless File.exist? OUTPUT_XCFRAMEWORK_INFO_PLIST
 end
 
 file PREBUILT_ARCHIVE do
   next if NO_PREBUILT
-  download PREBUILT_URL, PREBUILT_ARCHIVE rescue OpenURI::HTTPError
+  download PREBUILT_URL, PREBUILT_ARCHIVE
 end
 
 
