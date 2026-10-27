@@ -28,8 +28,8 @@ It is the runtime that lets the `xord/*` family — [Reflex](https://github.com/
 
 ## 📋 Requirements
 
-- **macOS** 10.7 or later
-- **iOS** 10.0 or later
+- **macOS** 11.0 or later
+- **iOS** 14.0 or later
 - Xcode (recent enough to build the deployment targets above)
 - [CocoaPods](https://cocoapods.org/)
 - Ruby and `rake` (used to build the framework from source)
