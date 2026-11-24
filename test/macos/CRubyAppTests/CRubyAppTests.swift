@@ -28,7 +28,7 @@ final class CRubyAppTests: XCTestCase {
             ENV['SSL_CERT_FILE'] = '/etc/ssl/cert.pem'
             require 'net/http'
             require 'uri'
-            uri = URI('https://www.example.com/')
+            uri = URI('https://www.ruby-lang.org/')
             Net::HTTP.get_response(uri).code
         """)
         XCTAssertEqual("200", code)
