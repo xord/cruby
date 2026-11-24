@@ -121,6 +121,12 @@ OSSL_CONFIGURE   = "#{OSSL_DIR}/Configure"
 OSSL_CUSTOM_CONF = "#{OSSL_DIR}/Configurations/999-custom.conf"
 YAML_CONFIGURE   = "#{YAML_DIR}/configure"
 
+LIBS = {
+  'ruby'    => [RUBY_DIR, RUBY_URL, RUBY_SHA256, RUBY_ARCHIVE, RUBY_CONFIGURE],
+  'openssl' => [OSSL_DIR, OSSL_URL, OSSL_SHA256, OSSL_ARCHIVE, OSSL_CONFIGURE],
+  'libyaml' => [YAML_DIR, YAML_URL, YAML_SHA256, YAML_ARCHIVE, YAML_CONFIGURE]
+}
+
 HEADERS_PATCH         = "#{ROOT_DIR}/headers.patch"
 HEADERS_PATCH_DEV_DIR = "#{ROOT_DIR}/.headers"
 
@@ -147,6 +153,11 @@ OUTPUT_LIB_CONFIG_DIR   = "#{OUTPUT_LIB_DIR}/config"
 OUTPUT_LIB_RBCONFIG_DIR = "#{OUTPUT_LIB_DIR}/rbconfig"
 OUTPUT_RBCONFIG_RB      = "#{OUTPUT_LIB_RBCONFIG_DIR}/rbconfig.rb"
 
+OUTPUT_LICENSES_DIR = "#{OUTPUT_DIR}/licenses"
+OUTPUT_LICENSES     = LIBS.keys.map {"#{OUTPUT_LICENSES_DIR}/#{_1}"}
+LICENSE_FILES       = '{LICENSE,LICENCE,COPYING,BSDL,LEGAL,MIT-LICENSE}*'
+LICENSE_EXCLUDES    = %w[COPYING.ja]
+
 OUTPUT_ARCHIVE   = "#{NAME}_prebuilt-#{CRuby.version}.tar.gz"
 PREBUILT_URL     = "#{GITHUB_URL}/releases/download/v#{CRuby.version}/#{OUTPUT_ARCHIVE}"
 PREBUILT_ARCHIVE = PREBUILT_PATH || "downloaded_#{OUTPUT_ARCHIVE}"
@@ -168,7 +179,12 @@ task :clobber => [:clean, 'test:clobber'] do
 end
 
 desc "build"
-task :build => [OUTPUT_XCFRAMEWORK_INFO_PLIST, OUTPUT_RUBY_H, OUTPUT_RBCONFIG_RB]
+task :build => [
+  OUTPUT_XCFRAMEWORK_INFO_PLIST,
+  OUTPUT_RUBY_H,
+  OUTPUT_RBCONFIG_RB,
+  *OUTPUT_LICENSES
+]
 
 desc "test"
 task :test => 'test:test'
@@ -181,11 +197,7 @@ directory OUTPUT_LIB_DATA_DIR
 directory OUTPUT_LIB_CONFIG_DIR
 directory OUTPUT_LIB_RBCONFIG_DIR
 
-[
-  [RUBY_DIR, RUBY_URL, RUBY_SHA256, RUBY_ARCHIVE, RUBY_CONFIGURE],
-  [OSSL_DIR, OSSL_URL, OSSL_SHA256, OSSL_ARCHIVE, OSSL_CONFIGURE],
-  [YAML_DIR, YAML_URL, YAML_SHA256, YAML_ARCHIVE, YAML_CONFIGURE]
-].each do |dir, url, sha256, archive, configure|
+LIBS.values.each do |dir, url, sha256, archive, configure|
   task :clobber do
     sh %( rm -rf #{archive} #{dir} )
   end
@@ -463,6 +475,17 @@ file OUTPUT_RBCONFIG_RB => [
   write_file OUTPUT_RBCONFIG_RB, 'require "rbconfig-#{CRUBY_BUILD_SDK_AND_ARCH}"'
   sh %( cp -rf #{lib_dir}/* #{OUTPUT_LIB_DIR} )
   sh %( rm -rf #{OUTPUT_LIB_DIR}#{lib_arch_dir.sub /^#{lib_dir}/, ''} )
+end
+
+LIBS.each do |name, (dir, _, _, _, configure)|
+  output = "#{OUTPUT_LICENSES_DIR}/#{name}"
+  file output => configure do
+    files = (Dir.glob(LICENSE_FILES, File::FNM_CASEFOLD, base: dir) - LICENSE_EXCLUDES)
+      .map {"#{dir}/#{_1}"}.select {File.file? _1}
+    raise "no license file in #{dir}" if files.empty?
+    mkdir_p output
+    cp files, output
+  end
 end
 
 

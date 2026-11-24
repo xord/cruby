@@ -236,4 +236,4 @@ In the [`xord/all`](https://github.com/xord/all) monorepo you can scope by modul
 **CRuby (xord/cruby)** is licensed under the MIT License.
 See the [LICENSE](./LICENSE) file for details.
 
-The bundled upstream sources retain their own licenses (Ruby: BSD-2-clause / Ruby License; OpenSSL: Apache-2.0; libyaml: MIT).
+The bundled upstream sources retain their own licenses (Ruby: BSD-2-clause / Ruby License; OpenSSL: Apache-2.0; libyaml: MIT), whose files the build puts in `CRuby/licenses/<name>/`, as `ruby/LEGAL`, for an app embedding it to have them.
